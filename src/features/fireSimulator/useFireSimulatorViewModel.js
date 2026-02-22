@@ -264,6 +264,7 @@ export function useFireSimulatorViewModel() {
       dependentBirthDate: householdType.value === "family" ? (dependentBirthDates.value[0] || null) : null,
       dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],
       independenceAge: independenceAge.value,
+      householdType: householdType.value,
     }),
   );
 

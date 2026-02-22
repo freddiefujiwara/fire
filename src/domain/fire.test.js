@@ -7,9 +7,32 @@ import {
   normalizeFireParams,
   performFireSimulation,
   calculateLifestyleReduction,
+  generateAlgorithmExplanationSegments,
 } from "./fire";
 
 describe("fire domain", () => {
+  describe("generateAlgorithmExplanationSegments", () => {
+    it("shows family structure change section when householdType is family and children are set", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "family",
+        dependentBirthDates: ["2015-01-01"],
+        independenceAge: 24,
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).toContain("■ 家族構成の変化（子の独立）について");
+    });
+  });
+
   it("keeps expected exported functions on the fire barrel", () => {
     expect(fireDomain).toMatchObject({
       calculateMonthlyPension: expect.any(Function),
