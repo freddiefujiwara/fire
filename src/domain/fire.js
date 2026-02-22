@@ -1,5 +1,6 @@
 export {
   calculateMonthlyPension,
+  calculateStartAgeAdjustmentRate,
   DEFAULT_PENSION_CONFIG,
   generateAlgorithmExplanationSegments,
   calculateLifestyleReduction,

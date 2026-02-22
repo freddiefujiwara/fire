@@ -50,6 +50,46 @@ describe("fire domain", () => {
       // FIRE at 65, but participation for pension calculation caps at 60
       expect(calculateMonthlyPension(60, 65, legacyConfig)).toBe(calculateMonthlyPension(60, 60, legacyConfig));
     });
+
+    it("uses 1.0 adjustment when starting at age 65 and earlyReduction is omitted", () => {
+      const config = {
+        ...legacyConfig,
+        userStartAge: 65,
+        spouseUserAgeStart: 99,
+        earlyReduction: undefined,
+      };
+
+      // basic: 780,000 * 0.9 = 702,000
+      // kosei: 892,252 + (50 - 44) * 42,000 = 1,144,252
+      // total: 1,846,252, monthly: 153,854
+      expect(calculateMonthlyPension(65, 50, config)).toBe(153854);
+    });
+
+    it("automatically applies 0.4% monthly reduction when starting before age 65", () => {
+      const config = {
+        ...legacyConfig,
+        userStartAge: 64,
+        spouseUserAgeStart: 99,
+        earlyReduction: undefined,
+      };
+
+      // 12 months early => adjustment 1 - 0.004 * 12 = 0.952
+      // (702,000 + 1,144,252) * 0.952 = 1,757,629.904 => monthly 146,469
+      expect(calculateMonthlyPension(64, 50, config)).toBe(146469);
+    });
+
+    it("automatically applies 0.7% monthly increase when starting after age 65", () => {
+      const config = {
+        ...legacyConfig,
+        userStartAge: 66,
+        spouseUserAgeStart: 99,
+        earlyReduction: undefined,
+      };
+
+      // 12 months delayed => adjustment 1 + 0.007 * 12 = 1.084
+      // (702,000 + 1,144,252) * 1.084 = 2,001,337.168 => monthly 166,778
+      expect(calculateMonthlyPension(66, 50, config)).toBe(166778);
+    });
   });
 
 

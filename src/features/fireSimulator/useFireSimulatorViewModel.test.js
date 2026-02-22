@@ -81,6 +81,20 @@ describe("useFireSimulatorViewModel", () => {
     expect(vm.pensionConfig.value.basicReduction).toBe(1.0);
   });
 
+
+  it("uses age-based earlyReduction when URL pensionConfig is present but earlyReduction is missing", async () => {
+    const { encode } = await import("@/domain/fire/url");
+    const encoded = encode({ pc: { userStartAge: 65 } });
+
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: { p: encoded },
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    expect(vm.pensionConfig.value.earlyReduction).toBe(1.0);
+  });
+
   it("updates URL when state changes", async () => {
     const replaceMock = vi.fn();
     vi.spyOn(vueRouter, "useRouter").mockReturnValue({
