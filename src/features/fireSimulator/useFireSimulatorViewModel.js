@@ -105,7 +105,7 @@ export function useFireSimulatorViewModel() {
   };
 
   const loadFromUrl = () => {
-    const p = route.query.p;
+    const p = route.params.p;
     if (p) {
       const decoded = decode(p);
       if (decoded) {
@@ -135,7 +135,7 @@ export function useFireSimulatorViewModel() {
     (newState) => {
       const encoded = encode(newState);
       router.replace({
-        query: { ...route.query, p: encoded },
+        params: { p: encoded },
       });
     },
     { deep: true },

@@ -18,6 +18,7 @@ vi.mock("vue-router", () => ({
     replace: vi.fn(),
   }),
   useRoute: () => ({
+    params: {},
     query: {},
   }),
 }));
@@ -38,7 +39,7 @@ describe("useFireSimulatorViewModel", () => {
     expect(vm.copyConditionsAndAlgorithm()).toContain("pensionConfig");
   });
 
-  it("initializes from URL if 'p' query param is present", async () => {
+  it("initializes from URL if 'p' path parameter is present", async () => {
     const mockState = {
       ht: "single",
       mi: 555555,
@@ -47,7 +48,8 @@ describe("useFireSimulatorViewModel", () => {
     const encoded = encode(mockState);
 
     vi.spyOn(vueRouter, "useRoute").mockReturnValue({
-      query: { p: encoded },
+      params: { p: encoded },
+      query: {},
     });
 
     const vm = useFireSimulatorViewModel();
@@ -61,6 +63,7 @@ describe("useFireSimulatorViewModel", () => {
       replace: replaceMock,
     });
     vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: {},
       query: {},
     });
 
@@ -70,7 +73,7 @@ describe("useFireSimulatorViewModel", () => {
 
     expect(replaceMock).toHaveBeenCalled();
     const callArgs = replaceMock.mock.calls[0][0];
-    expect(callArgs.query.p).toBeDefined();
+    expect(callArgs.params.p).toBeDefined();
   });
 
   it("runs monte carlo only when enabled and clears results when disabled", async () => {
