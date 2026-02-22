@@ -277,6 +277,7 @@ export function useFireSimulatorViewModel() {
     annualInvestmentYen: annualInvestment.value,
     annualSavingsYen: annualSavings.value,
     annualBonusYen: annualBonus.value,
+    mortgageMonthlyPaymentYen: mortgageMonthlyPayment.value,
     requiredAssetsAtFireYen: requiredAssetsAtFire.value,
     fireAchievementMonth: fireAchievementMonth.value,
     fireAchievementAge: fireAchievementAge.value,
