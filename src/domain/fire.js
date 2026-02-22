@@ -3,7 +3,6 @@ export {
   calculateStartAgeAdjustmentRate,
   DEFAULT_PENSION_CONFIG,
   generateAlgorithmExplanationSegments,
-  calculateLifestyleReduction,
   normalizeFireParams,
   performFireSimulation,
   generateGrowthTable,
