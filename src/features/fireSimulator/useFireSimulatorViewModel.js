@@ -370,7 +370,7 @@ export function useFireSimulatorViewModel() {
 
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
-  async function downloadAnnualTableCsv() {
+  function downloadAnnualTableCsv() {
     const data = annualSimulationData.value;
     if (!data || data.length === 0) return;
 
@@ -378,26 +378,6 @@ export function useFireSimulatorViewModel() {
     const fileName = `fire_simulation_${new Date().toISOString().split('T')[0]}.csv`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 
-    // Try Web Share API (native on iOS/Android)
-    if (navigator.share && navigator.canShare) {
-      const file = new File([blob], fileName, { type: 'text/csv' });
-      if (navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'FIRE シミュレーション結果',
-            text: '年齢別収支推移表',
-          });
-          return;
-        } catch (err) {
-          if (err.name !== 'AbortError') {
-            console.error('Share failed:', err);
-          }
-        }
-      }
-    }
-
-    // Fallback to traditional download
     triggerDownload(blob, fileName);
   }
 
@@ -417,19 +397,16 @@ export function useFireSimulatorViewModel() {
       return;
     }
 
+    const url = URL.createObjectURL(blob);
+
     if (isIOS() && isLikelySafari()) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const popup = window.open(reader.result, '_blank');
-        if (!popup) {
-          alert('ダウンロードを開始できませんでした。ブラウザのポップアップブロック設定をご確認ください。');
-        }
-      };
-      reader.readAsDataURL(blob);
-      return;
+      const popup = window.open(url, '_blank');
+      if (popup) {
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        return;
+      }
     }
 
-    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute('download', fileName);
