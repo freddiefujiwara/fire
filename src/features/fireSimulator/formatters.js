@@ -1,14 +1,5 @@
 import { calculateMonthlyPension } from "@/domain/fire";
 
-export const EMPTY_SUMMARY = {
-  monthlyLivingExpenses: { average: 0, breakdown: [], averageSpecial: 0 },
-  monthlyRegularIncome: { average: 0, breakdown: [] },
-  annualBonus: { average: 0, breakdown: [] },
-  avgFixedMonthly: 0,
-  avgVariableMonthly: 0,
-  monthCount: 0,
-};
-
 export function createMortgageOptions(baseDate = new Date(), months = 420) {
   const options = [];
   for (let i = 0; i <= months; i += 1) {
