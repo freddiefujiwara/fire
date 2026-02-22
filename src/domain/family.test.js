@@ -10,4 +10,13 @@ describe("family domain", () => {
     expect(calculateAge(birthDate, new Date("2024-01-01"))).toBe(44);
     expect(calculateAge(birthDate, new Date("2025-01-01"))).toBe(45);
   });
+
+  it("returns 0 for missing or invalid birth date", () => {
+    expect(calculateAge("", new Date("2024-01-01"))).toBe(0);
+    expect(calculateAge("not-a-date", new Date("2024-01-01"))).toBe(0);
+  });
+
+  it("decrements age when birthday has not occurred in the current month", () => {
+    expect(calculateAge("2000-07-20", new Date("2024-07-01"))).toBe(23);
+  });
 });

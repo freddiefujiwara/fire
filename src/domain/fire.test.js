@@ -31,6 +31,94 @@ describe("fire domain", () => {
       const text = segments.map((seg) => seg.value).join("");
       expect(text).toContain("■ 家族構成の変化（子の独立）について");
     });
+
+    it("uses default reduction text for 2 children and includes Monte Carlo explanation", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: true,
+        monteCarloTrials: 500,
+        monteCarloVolatilityPct: 18,
+        householdType: "family",
+        dependentBirthDates: ["2015-01-01", "2017-01-01"],
+        independenceAge: 24,
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).toContain("1人目: 0.85 / 2人目: 0.70");
+      expect(text).toContain("■ 順序リスク評価（モンテカルロ法）について");
+      expect(text).toContain("500 回");
+      expect(text).toContain("18%");
+    });
+
+
+
+    it("does not include family section when householdType is not family", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "single",
+        dependentBirthDate: "2015-01-01",
+        independenceAge: 24,
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).not.toContain("■ 家族構成の変化（子の独立）について");
+    });
+
+
+
+    it("does not include family section when family has no children", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "family",
+        dependentBirthDates: [],
+        dependentBirthDate: null,
+        independenceAge: 24,
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).not.toContain("■ 家族構成の変化（子の独立）について");
+    });
+
+    it("uses default reduction text for 3 children", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "family",
+        dependentBirthDates: ["2014-01-01", "2016-01-01", "2018-01-01"],
+        independenceAge: 24,
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).toContain("1人目: 0.90 / 2人目: 0.80 / 3人目: 0.65");
+    });
   });
 
   it("keeps expected exported functions on the fire barrel", () => {
@@ -76,6 +164,30 @@ describe("fire domain", () => {
       const result = normalizeFireParams({ currentAge: 0, initialAssets: 0 });
       expect(result.currentAge).toBe(40); // 0 is treated as missing and falls back to 40
       expect(result.initialAssets).toBe(0); // initialAssets uses ?? 0, so 0 is kept
+    });
+
+    it("filters invalid dependent date inputs from different shapes", () => {
+      const fromNonArray = normalizeFireParams({ dependentBirthDates: "2010-01-01" });
+      expect(fromNonArray.dependentBirthDates).toEqual([]);
+
+      const fromArrayWithInvalid = normalizeFireParams({
+        householdType: "family",
+        dependentBirthDates: ["invalid-date", "2012-09-09"],
+      });
+
+      const result = performFireSimulation({
+        ...fromArrayWithInvalid,
+        initialAssets: 50000000,
+        riskAssets: 0,
+        monthlyExpense: 200000,
+        includeInflation: false,
+        includePension: false,
+        retirementLumpSumAtFire: 0,
+        withdrawalRate: 0,
+        maxMonths: 2,
+      }, { recordMonthly: true, forceFireMonth: 0 });
+
+      expect(result.monthlyData).toHaveLength(3);
     });
   });
 
@@ -271,6 +383,31 @@ describe("fire domain", () => {
       expect(result.monthlyData[143].expenses).toBe(180000);
       expect(result.monthlyData[170].expenses).toBe(160000);
       expect(result.monthlyData[211].expenses).toBe(130000);
+      vi.useRealTimers();
+    });
+
+    it("applies staged default reduction for 2 children", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-05-14T09:00:00+09:00"));
+
+      const result = performFireSimulation({
+        initialAssets: 100000000,
+        riskAssets: 0,
+        monthlyExpense: 200000,
+        currentAge: 45,
+        includeInflation: false,
+        includePension: false,
+        retirementLumpSumAtFire: 0,
+        withdrawalRate: 0,
+        maxMonths: 200,
+        householdType: "family",
+        dependentBirthDates: ["2013-02-20", "2015-06-10"],
+        independenceAge: 24,
+      }, { recordMonthly: true, forceFireMonth: 0 });
+
+      // 1人目独立後は0.85, 2人目独立後は0.70
+      expect(result.monthlyData[143].expenses).toBe(170000);
+      expect(result.monthlyData[171].expenses).toBe(140000);
       vi.useRealTimers();
     });
     it("handles extreme negative flow with current assets", () => {
