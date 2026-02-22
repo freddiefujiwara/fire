@@ -370,31 +370,33 @@ export function useFireSimulatorViewModel() {
 
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
-  async function downloadAnnualTableCsv() {
-    const csv = generateCsv(annualSimulationData.value);
+  function downloadAnnualTableCsv() {
+    const data = annualSimulationData.value;
+    if (!data || data.length === 0) return;
+
+    const csv = generateCsv(data);
     const fileName = `fire_simulation_${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 
-    // Try Web Share API for mobile devices
-    if (navigator.share) {
-      const file = new File([csv], fileName, { type: 'text/csv' });
-      const canShareFiles = navigator.canShare && navigator.canShare({ files: [file] });
-
-      if (canShareFiles) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'FIRE シミュレーション結果',
-          });
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-          console.error('Share failed:', err);
-        }
+    // Try Web Share API (native on iOS/Android)
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], fileName, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: 'FIRE シミュレーション結果',
+          text: '年齢別収支推移表',
+        }).catch(err => {
+          if (err.name !== 'AbortError') {
+            console.error('Share failed:', err);
+            triggerDownload(blob, fileName);
+          }
+        });
+        return;
       }
     }
 
     // Fallback to traditional download
-    const blob = new Blob([csv], { type: 'application/octet-stream' });
     triggerDownload(blob, fileName);
   }
 
@@ -402,16 +404,35 @@ export function useFireSimulatorViewModel() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = fileName;
-    link.style.display = 'none';
+    link.setAttribute('download', fileName);
+
+    // For iOS Safari, the link sometimes needs to be in the DOM and visible (but hidden)
+    link.style.position = 'fixed';
+    link.style.left = '0';
+    link.style.top = '0';
+    link.style.opacity = '0';
+    link.style.pointerEvents = 'none';
+
     document.body.appendChild(link);
+
+    // Standard click
     link.click();
 
-    // Delay revocation significantly for mobile browsers
+    // Fallback for some browsers: dispatch a manual click event
+    const clickEvent = new MouseEvent('click', {
+      view: window,
+      bubbles: true,
+      cancelable: true
+    });
+    link.dispatchEvent(clickEvent);
+
+    // Delay cleanup to ensure browser has started the download
     setTimeout(() => {
-      document.body.removeChild(link);
+      if (link.parentNode) {
+        document.body.removeChild(link);
+      }
       URL.revokeObjectURL(url);
-    }, 10000);
+    }, 15000);
   }
 
   return {

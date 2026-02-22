@@ -11,7 +11,7 @@ defineEmits(["download"]);
 <template>
   <div class="chart-card simulation-table-card">
     <div class="table-header">
-      <button class="download-btn" @click="$emit('download')" title="CSVダウンロード / 共有">
+      <button type="button" class="download-btn" @click.stop="$emit('download')" title="CSVダウンロード / 共有">
         <span class="icon">📥</span>
         <span class="label">CSV</span>
       </button>
