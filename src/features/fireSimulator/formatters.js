@@ -33,6 +33,7 @@ export function buildConditionsAndAlgorithmJson({
   monteCarloSeed,
   estimatedMonthlyPensionAt60,
   pensionAnnualAtFire,
+  pensionEstimateAge,
   fireAchievementAge,
   algorithmExplanation,
 }) {
@@ -131,9 +132,14 @@ export function buildConditionsAndAlgorithmJson({
       },
       pensionEstimates: {
         householdMonthlyAtUserAge60Yen: estimatedMonthlyPensionAt60,
-        householdAnnualAtUserAge60Yen: pensionAnnualAtFire,
+        householdAnnualAtPensionEstimateAgeYen: pensionAnnualAtFire,
+        pensionEstimateAge,
         userMonthlyAtAge60Yen: calculateMonthlyPension(60, fireAchievementAge, pensionConfig),
-        spouseMonthlyAtUserAge62Yen: Math.round(pensionConfig.basicFullAnnualYen / 12),
+        spouseBasicMonthlyEquivalentYen: Math.round(pensionConfig.basicFullAnnualYen / 12),
+        spouseBasicMonthlyAtPensionEstimateAgeYen:
+          pensionConfig.includeSpouse && pensionEstimateAge >= pensionConfig.spouseUserAgeStart
+            ? Math.round(pensionConfig.basicFullAnnualYen / 12)
+            : 0,
         spousePensionStartWhenUserAge: pensionConfig.spouseUserAgeStart,
       },
     },

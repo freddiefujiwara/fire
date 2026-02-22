@@ -394,6 +394,7 @@ export function useFireSimulatorViewModel() {
         monteCarloSeed: monteCarloSeed.value,
         estimatedMonthlyPensionAt60: estimatedMonthlyPensionAt60.value,
         pensionAnnualAtFire: pensionAnnualAtFire.value,
+        pensionEstimateAge: pensionEstimateAge.value,
         fireAchievementAge: fireAchievementAge.value,
         algorithmExplanation: algorithmExplanationFull.value,
       }),

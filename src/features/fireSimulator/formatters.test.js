@@ -64,6 +64,7 @@ describe("fireSimulator formatters", () => {
         pensionConfig: {
           basicFullAnnualYen: 816000,
           spouseUserAgeStart: 62,
+          includeSpouse: true,
         },
       },
       monteCarloResults: { successRate: 0.51, p10: 1, p50: 2, p90: 3, trials: 1000 },
@@ -71,6 +72,7 @@ describe("fireSimulator formatters", () => {
       monteCarloSeed: 42,
       estimatedMonthlyPensionAt60: 100,
       pensionAnnualAtFire: 1200,
+      pensionEstimateAge: 62,
       fireAchievementAge: 45,
       algorithmExplanation: "keep-this",
     });
@@ -78,6 +80,9 @@ describe("fireSimulator formatters", () => {
     expect(result.simulationInputs.portfolioAndCashflow.mortgageMonthlyPaymentYen).toBe(10);
     expect(result.keyResults.fireTarget.fireAchievementAge).toBe(45);
     expect(result.monteCarloSimulation.terminalAssetsPercentilesYen.p50Yen).toBe(2);
+    expect(result.keyResults.pensionEstimates.householdAnnualAtPensionEstimateAgeYen).toBe(1200);
+    expect(result.keyResults.pensionEstimates.spouseBasicMonthlyEquivalentYen).toBe(68000);
+    expect(result.keyResults.pensionEstimates.spouseBasicMonthlyAtPensionEstimateAgeYen).toBe(68000);
     expect(result.algorithmExplanation).toBe("keep-this");
   });
 });
