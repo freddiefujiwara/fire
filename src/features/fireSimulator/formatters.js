@@ -37,27 +37,107 @@ export function buildConditionsAndAlgorithmJson({
   algorithmExplanation,
 }) {
   const pensionConfig = conditions.pensionConfig;
-  return {
-    conditions,
-    monteCarlo: monteCarloResults
-      ? {
-          successRatePercent: (monteCarloResults.successRate * 100).toFixed(1),
+  const {
+    householdType,
+    totalFinancialAssetsYen,
+    riskAssetsYen,
+    cashAssetsYen,
+    estimatedAnnualExpenseYen,
+    estimatedAnnualIncomeYen,
+    annualInvestmentYen,
+    annualSavingsYen,
+    annualBonusYen,
+    mortgageMonthlyPaymentYen,
+    mortgagePayoffDate,
+    includeInflation,
+    inflationRatePercent,
+    includeTax,
+    taxRatePercent,
+    expectedAnnualReturnRatePercent,
+    withdrawalRatePercent,
+    postFireExtraExpenseMonthlyYen,
+    postFireFirstYearExtraExpenseYen,
+    retirementLumpSumAtFireYen,
+    userBirthDate,
+    dependentBirthDate,
+    dependentBirthDates,
+    requiredAssetsAtFireYen,
+    fireAchievementMonth,
+    fireAchievementAge: fireAchievementAgeFromConditions,
+  } = conditions;
+
+  const monteCarloSimulation = monteCarloResults
+    ? {
+        enabled: true,
+        trials: monteCarloResults.trials,
+        annualVolatilityPercent: monteCarloVolatility,
+        seed: monteCarloSeed,
+        successRatePercent: Number((monteCarloResults.successRate * 100).toFixed(1)),
+        terminalAssetsPercentilesYen: {
           p10Yen: monteCarloResults.p10,
           p50Yen: monteCarloResults.p50,
           p90Yen: monteCarloResults.p90,
-          trials: monteCarloResults.trials,
-          volatilityPercent: monteCarloVolatility,
-          seed: monteCarloSeed,
-        }
-      : null,
-    pensionEstimates: {
-      householdMonthlyAtUserAge60Yen: estimatedMonthlyPensionAt60,
-      householdAnnualAtUserAge60Yen: pensionAnnualAtFire,
-      userMonthlyAtAge60Yen: calculateMonthlyPension(60, fireAchievementAge, pensionConfig),
-      spouseMonthlyAtUserAge62Yen: Math.round(pensionConfig.basicFullAnnualYen / 12),
-      spousePensionStartWhenUserAge: pensionConfig.spouseUserAgeStart,
+        },
+      }
+    : {
+        enabled: false,
+        trials: null,
+        annualVolatilityPercent: monteCarloVolatility,
+        seed: monteCarloSeed,
+        successRatePercent: null,
+        terminalAssetsPercentilesYen: null,
+      };
+
+  return {
+    simulationInputs: {
+      householdProfile: {
+        householdType,
+        userBirthDate,
+        dependentBirthDate,
+        dependentBirthDates,
+      },
+      portfolioAndCashflow: {
+        totalFinancialAssetsYen,
+        riskAssetsYen,
+        cashAssetsYen,
+        estimatedAnnualExpenseYen,
+        estimatedAnnualIncomeYen,
+        annualInvestmentYen,
+        annualSavingsYen,
+        annualBonusYen,
+        mortgageMonthlyPaymentYen,
+        mortgagePayoffDate,
+      },
+      simulationAssumptions: {
+        expectedAnnualReturnRatePercent,
+        includeInflation,
+        inflationRatePercent,
+        includeTax,
+        taxRatePercent,
+        withdrawalRatePercent,
+      },
+      postFirePlan: {
+        postFireExtraExpenseMonthlyYen,
+        postFireFirstYearExtraExpenseYen,
+        retirementLumpSumAtFireYen,
+      },
+      pensionConfig,
     },
-    pensionConfig,
+    keyResults: {
+      fireTarget: {
+        requiredAssetsAtFireYen,
+        fireAchievementMonth,
+        fireAchievementAge: fireAchievementAgeFromConditions,
+      },
+      pensionEstimates: {
+        householdMonthlyAtUserAge60Yen: estimatedMonthlyPensionAt60,
+        householdAnnualAtUserAge60Yen: pensionAnnualAtFire,
+        userMonthlyAtAge60Yen: calculateMonthlyPension(60, fireAchievementAge, pensionConfig),
+        spouseMonthlyAtUserAge62Yen: Math.round(pensionConfig.basicFullAnnualYen / 12),
+        spousePensionStartWhenUserAge: pensionConfig.spouseUserAgeStart,
+      },
+    },
+    monteCarloSimulation,
     algorithmExplanation,
   };
 }

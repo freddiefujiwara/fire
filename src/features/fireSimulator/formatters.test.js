@@ -3,6 +3,7 @@ import {
   createMortgageOptions,
   fireDate,
   formatMonths,
+  buildConditionsAndAlgorithmJson,
 } from "./formatters";
 
 describe("fireSimulator formatters", () => {
@@ -28,5 +29,55 @@ describe("fireSimulator formatters", () => {
     expect(formatMonths(14)).toBe("1年2ヶ月");
     expect(formatMonths(1200)).toBe("100年以上");
     expect(formatMonths(-1)).toBe("100年以上");
+  });
+
+
+  it("builds reorganized conditions/algorithm payload while preserving algorithmExplanation", () => {
+    const result = buildConditionsAndAlgorithmJson({
+      conditions: {
+        householdType: "single",
+        totalFinancialAssetsYen: 1000,
+        riskAssetsYen: 600,
+        cashAssetsYen: 400,
+        estimatedAnnualExpenseYen: 120,
+        estimatedAnnualIncomeYen: 240,
+        annualInvestmentYen: 50,
+        annualSavingsYen: 70,
+        annualBonusYen: 20,
+        mortgageMonthlyPaymentYen: 10,
+        mortgagePayoffDate: null,
+        includeInflation: true,
+        inflationRatePercent: 2,
+        includeTax: true,
+        taxRatePercent: 20,
+        expectedAnnualReturnRatePercent: 5,
+        withdrawalRatePercent: 4,
+        postFireExtraExpenseMonthlyYen: 5,
+        postFireFirstYearExtraExpenseYen: 10,
+        retirementLumpSumAtFireYen: 0,
+        userBirthDate: "1990-01-01",
+        dependentBirthDate: null,
+        dependentBirthDates: [],
+        requiredAssetsAtFireYen: 3000,
+        fireAchievementMonth: 100,
+        fireAchievementAge: 45,
+        pensionConfig: {
+          basicFullAnnualYen: 816000,
+          spouseUserAgeStart: 62,
+        },
+      },
+      monteCarloResults: { successRate: 0.51, p10: 1, p50: 2, p90: 3, trials: 1000 },
+      monteCarloVolatility: 18,
+      monteCarloSeed: 42,
+      estimatedMonthlyPensionAt60: 100,
+      pensionAnnualAtFire: 1200,
+      fireAchievementAge: 45,
+      algorithmExplanation: "keep-this",
+    });
+
+    expect(result.simulationInputs.portfolioAndCashflow.mortgageMonthlyPaymentYen).toBe(10);
+    expect(result.keyResults.fireTarget.fireAchievementAge).toBe(45);
+    expect(result.monteCarloSimulation.terminalAssetsPercentilesYen.p50Yen).toBe(2);
+    expect(result.algorithmExplanation).toBe("keep-this");
   });
 });
