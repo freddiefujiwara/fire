@@ -370,7 +370,7 @@ export function useFireSimulatorViewModel() {
 
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
-  function downloadAnnualTableCsv() {
+  async function downloadAnnualTableCsv() {
     const data = annualSimulationData.value;
     if (!data || data.length === 0) return;
 
@@ -378,7 +378,7 @@ export function useFireSimulatorViewModel() {
     const fileName = `fire_simulation_${new Date().toISOString().split('T')[0]}.csv`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 
-    triggerDownload(blob, fileName, csv);
+    await triggerDownload(blob, fileName, csv);
   }
 
   function isLikelySafari() {
@@ -391,7 +391,25 @@ export function useFireSimulatorViewModel() {
     return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
-  function triggerDownload(blob, fileName, csvText) {
+  async function triggerDownload(blob, fileName, csvText) {
+    const file = new File([blob], fileName, { type: 'text/csv;charset=utf-8' });
+
+    // Try Web Share API first (especially for mobile)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+        });
+        return;
+      } catch (err) {
+        // If user cancelled, just return
+        if (err.name === 'AbortError') return;
+        // Otherwise fall back to traditional download
+        console.error('Share failed, falling back to download', err);
+      }
+    }
+
     if (window.navigator.msSaveOrOpenBlob) {
       window.navigator.msSaveOrOpenBlob(blob, fileName);
       return;

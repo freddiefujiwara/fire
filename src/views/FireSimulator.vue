@@ -52,6 +52,7 @@ const {
   algorithmExplanationSegments,
   copyConditionsAndAlgorithm,
   copyAnnualTable,
+  downloadAnnualTableCsv,
   // New exports
   householdType,
   userBirthDate,
