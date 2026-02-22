@@ -174,6 +174,7 @@ export function useFireSimulatorViewModel() {
     pensionConfig: pensionConfig.value,
     dependentBirthDate: householdType.value === "family" ? dependentBirthDate.value : null,
     independenceAge: independenceAge.value,
+    householdType: householdType.value,
   }));
 
   const growthData = computed(() => generateGrowthTable(simulationParams.value));
