@@ -378,35 +378,43 @@ export function useFireSimulatorViewModel() {
     const fileName = `fire_simulation_${new Date().toISOString().split('T')[0]}.csv`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 
-    // Try Web Share API (native on iOS/Android)
-    if (navigator.share && navigator.canShare) {
-      const file = new File([blob], fileName, { type: 'text/csv' });
-      if (navigator.canShare({ files: [file] })) {
-        navigator.share({
-          files: [file],
-          title: 'FIRE シミュレーション結果',
-          text: '年齢別収支推移表',
-        }).catch(err => {
-          if (err.name !== 'AbortError') {
-            console.error('Share failed:', err);
-            triggerDownload(blob, fileName);
-          }
-        });
-        return;
-      }
-    }
-
-    // Fallback to traditional download
-    triggerDownload(blob, fileName);
+    triggerDownload(blob, fileName, csv);
   }
 
-  function triggerDownload(blob, fileName) {
+  function isLikelySafari() {
+    const ua = navigator.userAgent;
+    return /^((?!chrome|android).)*safari/i.test(ua);
+  }
+
+  function isIOS() {
+    const ua = navigator.userAgent;
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function triggerDownload(blob, fileName, csvText) {
+    if (window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(blob, fileName);
+      return;
+    }
+
+    if (isIOS() && isLikelySafari()) {
+      const dataUrl = `data:text/csv;charset=utf-8,${encodeURIComponent(csvText)}`;
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.target = '_self';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute('download', fileName);
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener');
 
-    // For iOS Safari, the link sometimes needs to be in the DOM and visible (but hidden)
     link.style.position = 'fixed';
     link.style.left = '0';
     link.style.top = '0';
@@ -414,19 +422,8 @@ export function useFireSimulatorViewModel() {
     link.style.pointerEvents = 'none';
 
     document.body.appendChild(link);
-
-    // Standard click
     link.click();
 
-    // Fallback for some browsers: dispatch a manual click event
-    const clickEvent = new MouseEvent('click', {
-      view: window,
-      bubbles: true,
-      cancelable: true
-    });
-    link.dispatchEvent(clickEvent);
-
-    // Delay cleanup to ensure browser has started the download
     setTimeout(() => {
       if (link.parentNode) {
         document.body.removeChild(link);
