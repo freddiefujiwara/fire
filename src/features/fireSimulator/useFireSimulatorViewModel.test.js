@@ -1,5 +1,6 @@
 import { nextTick } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as vueRouter from "vue-router";
 
 vi.mock("@/domain/fire", async (importOriginal) => {
   const actual = await importOriginal();
@@ -11,6 +12,15 @@ vi.mock("@/domain/fire", async (importOriginal) => {
     generateAlgorithmExplanationSegments: () => [{ value: "abc" }],
   };
 });
+
+vi.mock("vue-router", () => ({
+  useRouter: () => ({
+    replace: vi.fn(),
+  }),
+  useRoute: () => ({
+    query: {},
+  }),
+}));
 
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
 
@@ -26,6 +36,41 @@ describe("useFireSimulatorViewModel", () => {
     expect(vm.requiredAssetsAtFire.value).toBe(777);
     expect(vm.copyAnnualTable()).toContain("incomeWithPensionYen");
     expect(vm.copyConditionsAndAlgorithm()).toContain("pensionConfig");
+  });
+
+  it("initializes from URL if 'p' query param is present", async () => {
+    const mockState = {
+      ht: "single",
+      mi: 555555,
+    };
+    const { encode } = await import("@/domain/fire/url");
+    const encoded = encode(mockState);
+
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      query: { p: encoded },
+    });
+
+    const vm = useFireSimulatorViewModel();
+    expect(vm.householdType.value).toBe("single");
+    expect(vm.monthlyInvestment.value).toBe(555555);
+  });
+
+  it("updates URL when state changes", async () => {
+    const replaceMock = vi.fn();
+    vi.spyOn(vueRouter, "useRouter").mockReturnValue({
+      replace: replaceMock,
+    });
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    vm.monthlyInvestment.value = 999999;
+    await nextTick();
+
+    expect(replaceMock).toHaveBeenCalled();
+    const callArgs = replaceMock.mock.calls[0][0];
+    expect(callArgs.query.p).toBeDefined();
   });
 
   it("runs monte carlo only when enabled and clears results when disabled", async () => {

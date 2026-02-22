@@ -1,4 +1,5 @@
 import { computed, ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { formatYen } from "@/domain/format";
 import {
   calculateAge,
@@ -15,6 +16,7 @@ import {
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
 } from "@/domain/fire";
+import { encode, decode } from "@/domain/fire/url";
 import FireSimulationTable from "@/components/FireSimulationTable.vue";
 import FireSimulationChart from "@/components/FireSimulationChart.vue";
 import {
@@ -26,6 +28,9 @@ import {
 } from "@/features/fireSimulator/formatters";
 
 export function useFireSimulatorViewModel() {
+  const router = useRouter();
+  const route = useRoute();
+
   // New Configuration State
   const householdType = ref("family"); // single, couple, family
   const userBirthDate = ref(DEFAULT_USER_BIRTH_DATE);
@@ -66,6 +71,75 @@ export function useFireSimulatorViewModel() {
   const manualAnnualBonus = ref(1000000);
   const mortgageMonthlyPayment = ref(0);
   const mortgagePayoffDate = ref("");
+
+  // URL State Sync
+  const stateToSync = {
+    ht: householdType,
+    ubd: userBirthDate,
+    sbd: spouseBirthDate,
+    dbd: dependentBirthDate,
+    ia: independenceAge,
+    pc: pensionConfig,
+    mira: manualInitialRiskAssets,
+    mica: manualInitialCashAssets,
+    mi: monthlyInvestment,
+    arr: annualReturnRate,
+    ii: includeInflation,
+    ir: inflationRate,
+    it: includeTax,
+    tr: taxRate,
+    pfee: postFireExtraExpense,
+    rlsaf: retirementLumpSumAtFire,
+    mpffyee: manualPostFireFirstYearExtraExpense,
+    wr: withdrawalRate,
+    ib: includeBonus,
+    umc: useMonteCarlo,
+    mct: monteCarloTrials,
+    mcv: monteCarloVolatility,
+    mcs: monteCarloSeed,
+    mme: manualMonthlyExpense,
+    mrmi: manualRegularMonthlyIncome,
+    mab: manualAnnualBonus,
+    mmp: mortgageMonthlyPayment,
+    mpd: mortgagePayoffDate,
+  };
+
+  const loadFromUrl = () => {
+    const p = route.query.p;
+    if (p) {
+      const decoded = decode(p);
+      if (decoded) {
+        Object.entries(stateToSync).forEach(([key, refVar]) => {
+          if (decoded[key] !== undefined) {
+            if (key === 'pc') {
+                refVar.value = { ...refVar.value, ...decoded[key] };
+            } else {
+                refVar.value = decoded[key];
+            }
+          }
+        });
+      }
+    }
+  };
+
+  loadFromUrl();
+
+  watch(
+    () => {
+      const state = {};
+      Object.entries(stateToSync).forEach(([key, refVar]) => {
+        state[key] = refVar.value;
+      });
+      return state;
+    },
+    (newState) => {
+      const encoded = encode(newState);
+      router.replace({
+        query: { ...route.query, p: encoded },
+      });
+    },
+    { deep: true },
+  );
 
   const monthlyExpense = computed(() => manualMonthlyExpense.value);
   const regularMonthlyIncome = computed(() => manualRegularMonthlyIncome.value);
