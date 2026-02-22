@@ -581,13 +581,13 @@ describe("fire domain", () => {
         ...params,
         initialAssets: 100000000, retirementLumpSumAtFire: 0, // already FIRE
         includePension: true,
-        currentAge: 59,
+        currentAge: 64,
       });
-      expect(result[0].age).toBe(59);
+      expect(result[0].age).toBe(64);
       expect(result[0].income).toBe(0);
       expect(result[0].pension).toBe(0);
 
-      expect(result[1].age).toBe(60);
+      expect(result[1].age).toBe(65);
       expect(result[1].pension).toBeGreaterThan(1000000);
     });
 
