@@ -42,6 +42,9 @@ const {
   fireAchievementMonth,
   fireAchievementAge,
   estimatedMonthlyPensionAt60,
+  pensionParticipationEndAge,
+  pensionFutureYears,
+  pensionProjectedAnnual,
   requiredAssetsAtFire,
   chartAnnotations,
   fireDate,
@@ -128,6 +131,14 @@ const {
           <div class="filter-item">
             <label>今後の厚生年金増分 (年額/年)</label>
             <NumericInput v-model="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" :step="1000" />
+          </div>
+          <div class="filter-item">
+            <label>データ基準年 (本人年齢)</label>
+            <NumericInput v-model="pensionConfig.pensionDataAge" />
+            <small style="color: var(--muted); margin-top: 6px;">
+              将来加算年数は、厚生年金加入終了年齢（{{ pensionParticipationEndAge }}歳）からデータ基準年（{{ pensionConfig.pensionDataAge }}歳）を引いた {{ pensionFutureYears }}年間となります。
+              受給年額は、現在の実績額（{{ formatYen(pensionConfig.userKoseiAccruedAtDataAgeAnnualYen) }}）に、今後の加算分（年間{{ formatYen(pensionConfig.userKoseiFutureFactorAnnualYenPerYear) }} × {{ pensionFutureYears }}年）を合計した {{ formatYen(pensionProjectedAnnual) }} として計算しています。
+            </small>
           </div>
           <div class="filter-item" v-if="householdType !== 'single'" style="flex-direction: row; align-items: center; gap: 8px;">
              <input type="checkbox" v-model="pensionConfig.includeSpouse" id="includeSpouse" />

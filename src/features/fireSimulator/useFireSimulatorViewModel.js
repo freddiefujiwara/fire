@@ -118,6 +118,7 @@ export function useFireSimulatorViewModel() {
     mpd: mortgagePayoffDate,
   };
 
+  let pensionDataAgeLoadedFromUrl = false;
   const loadFromUrl = () => {
     const p = route.params.p;
     if (p) {
@@ -127,6 +128,7 @@ export function useFireSimulatorViewModel() {
           if (decoded[key] !== undefined) {
             if (key === "pc") {
               refVar.value = { ...refVar.value, ...decoded[key] };
+              pensionDataAgeLoadedFromUrl = decoded[key]?.pensionDataAge !== undefined;
             } else {
               refVar.value = decoded[key];
             }
@@ -140,6 +142,9 @@ export function useFireSimulatorViewModel() {
   };
 
   loadFromUrl();
+  if (!pensionDataAgeLoadedFromUrl) {
+    pensionConfig.value.pensionDataAge = currentAge.value;
+  }
   if (!Array.isArray(dependentBirthDates.value)) {
     dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
   }
@@ -229,6 +234,12 @@ export function useFireSimulatorViewModel() {
   const fireAchievementAge = computed(() => Math.floor(currentAge.value + fireAchievementMonth.value / 12));
   const pensionAnnualAtFire = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value) * 12);
   const estimatedMonthlyPensionAt60 = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value));
+  const pensionParticipationEndAge = computed(() => Math.min(60, fireAchievementAge.value));
+  const pensionFutureYears = computed(() => pensionParticipationEndAge.value - pensionConfig.value.pensionDataAge);
+  const pensionProjectedAnnual = computed(() =>
+    pensionConfig.value.userKoseiAccruedAtDataAgeAnnualYen
+    + pensionConfig.value.userKoseiFutureFactorAnnualYenPerYear * pensionFutureYears.value,
+  );
 
   const requiredAssetsAtFire = computed(() => {
     const fireMonth = fireAchievementMonth.value;
@@ -292,6 +303,10 @@ export function useFireSimulatorViewModel() {
       dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],
       independenceAge: independenceAge.value,
       householdType: householdType.value,
+      pensionConfig: pensionConfig.value,
+      pensionParticipationEndAge: pensionParticipationEndAge.value,
+      pensionFutureYears: pensionFutureYears.value,
+      pensionProjectedAnnual: pensionProjectedAnnual.value,
     }),
   );
 
@@ -492,6 +507,9 @@ export function useFireSimulatorViewModel() {
     fireAchievementAge,
     pensionAnnualAtFire,
     estimatedMonthlyPensionAt60,
+    pensionParticipationEndAge,
+    pensionFutureYears,
+    pensionProjectedAnnual,
     requiredAssetsAtFire,
     chartAnnotations,
     fireDate,
