@@ -23,11 +23,20 @@ vi.mock("vue-router", () => ({
   }),
 }));
 
+// Mock URL.createObjectURL and URL.revokeObjectURL
+global.URL.createObjectURL = vi.fn(() => "mock-url");
+global.URL.revokeObjectURL = vi.fn();
+
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
 
 describe("useFireSimulatorViewModel", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.restoreAllMocks();
+
+    // Default mocks for navigator
+    global.navigator.share = vi.fn().mockResolvedValue(undefined);
+    global.navigator.canShare = vi.fn().mockReturnValue(false);
   });
 
   it("derives key values and export text", async () => {
@@ -132,5 +141,32 @@ describe("useFireSimulatorViewModel", () => {
     vm.manualRegularMonthlyIncome.value = 1000000;
     await nextTick();
     expect(vm.manualAnnualBonus.value).toBe(2000000); // Remained manual value
+  });
+
+  it("calls navigator.share when downloadAnnualTableCsv is called and sharing is supported", async () => {
+    global.navigator.canShare = vi.fn().mockReturnValue(true);
+    const shareSpy = vi.spyOn(navigator, "share");
+
+    const vm = useFireSimulatorViewModel();
+    await vm.downloadAnnualTableCsv();
+
+    expect(shareSpy).toHaveBeenCalled();
+  });
+
+  it("falls back to traditional download when sharing is not supported", async () => {
+    global.navigator.canShare = vi.fn().mockReturnValue(false);
+
+    // We can't easily test the document.createElement('a') part in this environment without more effort,
+    // but we can at least check it doesn't throw and maybe check URL.createObjectURL was called
+    const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
+
+    const vm = useFireSimulatorViewModel();
+    // To avoid issues with document not being fully mocked or link.click() failing
+    // we might need to mock document.createElement if it fails.
+
+    // In Vitest with jsdom, document.createElement works.
+    await vm.downloadAnnualTableCsv();
+
+    expect(createObjectURLSpy).toHaveBeenCalled();
   });
 });
