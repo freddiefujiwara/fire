@@ -274,7 +274,10 @@ export function normalizeFireParams(params) {
   };
 }
 
-function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, returnsArray = null } = {}) {
+function _runCoreSimulation(
+  params,
+  { recordMonthly = false, recordYearlyAssets = false, fireMonth = -1, returnsArray = null } = {},
+) {
   const {
     initialAssets,
     riskAssets,
@@ -319,6 +322,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   let currentCash = initialAssets - riskAssets;
   let fireReachedMonth = fireMonth;
   const monthlyData = recordMonthly ? [] : null;
+  const yearlyAssets = recordYearlyAssets ? [] : null;
 
   const simulationLimit = totalMonthsUntil100;
   let lifestyleReductionFactor = calculateLifestyleReduction(params.expenseBreakdown);
@@ -353,6 +357,10 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     }
 
     const assets = Math.max(0, currentCash + currentRisk);
+
+    if (recordYearlyAssets && m % 12 === 0) {
+      yearlyAssets.push(assets);
+    }
 
     const isFire = fireReachedMonth !== -1 && m >= fireReachedMonth;
     const fireAgeAtMonthM = fireReachedMonth === -1 ? (currentAge + 100) : currentAge + fireReachedMonth / 12;
@@ -470,7 +478,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   }
 
   const survived = (currentCash + currentRisk) >= 0;
-  return { fireReachedMonth, monthlyData, survived, finalAssets: currentCash + currentRisk };
+  return { fireReachedMonth, monthlyData, yearlyAssets, survived, finalAssets: currentCash + currentRisk };
 }
 
 function findSurvivalMonth(params, returnsArray = null) {
@@ -634,20 +642,15 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
     const res = _runCoreSimulation(params, {
       fireMonth,
       returnsArray,
-      recordMonthly: true
+      recordYearlyAssets: true,
     });
 
     finalAssetsList.push(res.finalAssets);
     if (res.survived) successCount++;
 
-    const yearAssets = [];
-    for (let y = 0; y <= totalYears; y++) {
-      const mIdx = y * 12;
-      if (mIdx < res.monthlyData.length) {
-        yearAssets.push(res.monthlyData[mIdx].assets);
-      } else {
-        yearAssets.push(res.monthlyData[res.monthlyData.length - 1].assets);
-      }
+    const yearAssets = [...(res.yearlyAssets || [])];
+    while (yearAssets.length < totalYears + 1) {
+      yearAssets.push(res.finalAssets);
     }
     annualHistory.push(yearAssets);
   }
@@ -728,20 +731,15 @@ export async function runMonteCarloSimulationAsync(
     const res = _runCoreSimulation(params, {
       fireMonth,
       returnsArray,
-      recordMonthly: true,
+      recordYearlyAssets: true,
     });
 
     finalAssetsList.push(res.finalAssets);
     if (res.survived) successCount++;
 
-    const yearAssets = [];
-    for (let y = 0; y <= totalYears; y++) {
-      const mIdx = y * 12;
-      if (mIdx < res.monthlyData.length) {
-        yearAssets.push(res.monthlyData[mIdx].assets);
-      } else {
-        yearAssets.push(res.monthlyData[res.monthlyData.length - 1].assets);
-      }
+    const yearAssets = [...(res.yearlyAssets || [])];
+    while (yearAssets.length < totalYears + 1) {
+      yearAssets.push(res.finalAssets);
     }
     annualHistory.push(yearAssets);
 
