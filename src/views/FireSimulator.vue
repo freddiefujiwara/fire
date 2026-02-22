@@ -61,6 +61,8 @@ const {
   pensionConfig,
   manualInitialRiskAssets,
   manualInitialCashAssets,
+  isAnnualBonusManual,
+  isPostFireFirstYearExtraExpenseManual,
 } = useFireSimulatorViewModel();
 </script>
 
@@ -94,10 +96,6 @@ const {
             </div>
             <button type="button" v-if="dependentBirthDates.length < 3" @click="addDependentBirthDate">子を追加</button>
           </div>
-        </div>
-        <div class="filter-item" v-if="householdType === 'family'">
-          <label>子の独立年齢</label>
-          <input v-model.number="independenceAge" type="number" />
         </div>
         <div class="filter-item">
           <label>初期リスク資産 (円)</label>
@@ -135,23 +133,80 @@ const {
         </div>
       </details>
 
+      <details style="margin-top: 10px;">
+        <summary style="font-size: 0.8rem; cursor: pointer; color: var(--muted);">詳細設定</summary>
+        <div class="fire-form-grid" style="margin-top: 10px;">
+          <div class="filter-item" v-if="householdType === 'family'">
+            <label>子の独立年齢</label>
+            <input v-model.number="independenceAge" type="number" />
+          </div>
+          <div class="filter-item">
+            <label>期待リターン (年率 %)</label>
+            <input v-model.number="annualReturnRate" type="number" step="0.1" class="is-public" />
+          </div>
+          <div class="filter-item">
+            <label>取り崩し率 (%)</label>
+            <input v-model.number="withdrawalRate" type="number" step="0.1" class="is-public" />
+          </div>
+          <div class="filter-item expense-item">
+            <div class="label-row">
+              <label>ボーナス (年額)</label>
+              <div class="toggle-group">
+                <label class="auto-toggle is-public">
+                  <input type="checkbox" v-model="includeBonus" class="is-public" /> ボーナスを考慮
+                </label>
+              </div>
+            </div>
+            <input v-model.number="manualAnnualBonus" type="number" step="10000" :disabled="!includeBonus" @input="isAnnualBonusManual = true" />
+          </div>
+          <div class="filter-item">
+            <label>住宅ローン月額 (円)</label>
+            <input v-model.number="mortgageMonthlyPayment" type="number" step="10000" />
+          </div>
+          <div class="filter-item">
+            <label>ローン完済年月</label>
+            <input v-model="mortgagePayoffDate" type="month" class="date-select" />
+          </div>
+          <div class="filter-item">
+            <label class="is-public">インフレ考慮</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="checkbox" v-model="includeInflation" class="is-public" />
+              <input v-if="includeInflation" v-model.number="inflationRate" type="number" step="0.1" style="width: 60px;" class="is-public" />
+              <span v-if="includeInflation" class="is-public">%</span>
+            </div>
+          </div>
+          <div class="filter-item">
+            <label class="is-public">税金考慮</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="checkbox" v-model="includeTax" class="is-public" />
+              <input v-if="includeTax" v-model.number="taxRate" type="number" step="0.1" style="width: 80px;" class="is-public" />
+              <span v-if="includeTax" class="is-public">%</span>
+            </div>
+          </div>
+          <div class="filter-item">
+            <label>FIRE後の社会保険料・税(月額)</label>
+            <input v-model.number="postFireExtraExpense" type="number" step="5000" />
+          </div>
+          <div class="filter-item expense-item">
+            <div class="label-row">
+              <label>FIRE達成時の退職金 (円)</label>
+            </div>
+            <input v-model.number="retirementLumpSumAtFire" type="number" step="100000" />
+          </div>
+          <div class="filter-item expense-item">
+            <div class="label-row">
+              <label>FIRE1年目の追加支出 (年額)</label>
+            </div>
+            <input v-model.number="manualPostFireFirstYearExtraExpense" type="number" step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
+          </div>
+        </div>
+      </details>
+
       <h3 class="section-title" style="margin-top: 24px;">シミュレーション引数</h3>
       <div class="fire-form-grid">
         <div class="filter-item">
           <label>毎月の投資額 (円)</label>
           <input v-model.number="monthlyInvestment" type="number" step="10000" />
-        </div>
-        <div class="filter-item">
-          <label>期待リターン (年率 %)</label>
-          <input v-model.number="annualReturnRate" type="number" step="0.1" class="is-public" />
-        </div>
-        <div class="filter-item">
-          <label>現在の年齢 (自動算出)</label>
-          <input :value="currentAge" type="number" disabled class="is-public" />
-        </div>
-        <div class="filter-item">
-          <label>取り崩し率 (%)</label>
-          <input v-model.number="withdrawalRate" type="number" step="0.1" class="is-public" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
@@ -164,57 +219,6 @@ const {
             <label>定期収入 (月額)</label>
           </div>
           <input v-model.number="manualRegularMonthlyIncome" type="number" step="10000" />
-        </div>
-        <div class="filter-item expense-item">
-          <div class="label-row">
-            <label>ボーナス (年額)</label>
-            <div class="toggle-group">
-              <label class="auto-toggle is-public">
-                <input type="checkbox" v-model="includeBonus" class="is-public" /> ボーナスを考慮
-              </label>
-            </div>
-          </div>
-          <input v-model.number="manualAnnualBonus" type="number" step="10000" :disabled="!includeBonus" />
-        </div>
-        <div class="filter-item">
-          <label>住宅ローン月額 (円)</label>
-          <input v-model.number="mortgageMonthlyPayment" type="number" step="10000" />
-        </div>
-        <div class="filter-item">
-          <label>ローン完済年月</label>
-          <input v-model="mortgagePayoffDate" type="month" class="date-select" />
-        </div>
-        <div class="filter-item">
-          <label class="is-public">インフレ考慮</label>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <input type="checkbox" v-model="includeInflation" class="is-public" />
-            <input v-if="includeInflation" v-model.number="inflationRate" type="number" step="0.1" style="width: 60px;" class="is-public" />
-            <span v-if="includeInflation" class="is-public">%</span>
-          </div>
-        </div>
-        <div class="filter-item">
-          <label class="is-public">税金考慮</label>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <input type="checkbox" v-model="includeTax" class="is-public" />
-            <input v-if="includeTax" v-model.number="taxRate" type="number" step="0.1" style="width: 80px;" class="is-public" />
-            <span v-if="includeTax" class="is-public">%</span>
-          </div>
-        </div>
-        <div class="filter-item">
-          <label>FIRE後の社会保険料・税(月額)</label>
-          <input v-model.number="postFireExtraExpense" type="number" step="5000" />
-        </div>
-        <div class="filter-item expense-item">
-          <div class="label-row">
-            <label>FIRE達成時の退職金 (円)</label>
-          </div>
-          <input v-model.number="retirementLumpSumAtFire" type="number" step="100000" />
-        </div>
-        <div class="filter-item expense-item">
-          <div class="label-row">
-            <label>FIRE1年目の追加支出 (年額)</label>
-          </div>
-          <input v-model.number="manualPostFireFirstYearExtraExpense" type="number" step="100000" />
         </div>
       </div>
 
@@ -378,7 +382,6 @@ const {
       <article class="card">
         <h2>FIRE達成年齢</h2>
         <p class="is-positive">{{ fireAchievementAge }}歳</p>
-        <p class="meta">現在 {{ currentAge }}歳</p>
       </article>
       <article class="card">
         <h2>FIRE達成に必要な資産</h2>

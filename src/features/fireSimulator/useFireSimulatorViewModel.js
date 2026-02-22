@@ -53,7 +53,6 @@ export function useFireSimulatorViewModel() {
   const taxRate = ref(20.315);
   const postFireExtraExpense = ref(60000);
   const retirementLumpSumAtFire = ref(5000000);
-  const manualPostFireFirstYearExtraExpense = ref(0);
   const withdrawalRate = ref(4);
   const includeBonus = ref(true);
 
@@ -68,7 +67,19 @@ export function useFireSimulatorViewModel() {
 
   const manualMonthlyExpense = ref(300000);
   const manualRegularMonthlyIncome = ref(400000);
-  const manualAnnualBonus = ref(1000000);
+
+  // Constants for auto-calculation
+  const DEFAULT_BONUS_RATIO = 2.5; // 1M bonus / 400k income
+  const DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO = 0.1; // 10% of annual income for tax/social insurance spike
+
+  const manualAnnualBonus = ref(manualRegularMonthlyIncome.value * DEFAULT_BONUS_RATIO);
+  const isAnnualBonusManual = ref(false);
+
+  const manualPostFireFirstYearExtraExpense = ref(
+    Math.round(((manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value) * DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO) / 10000) * 10000,
+  );
+  const isPostFireFirstYearExtraExpenseManual = ref(false);
+
   const mortgageMonthlyPayment = ref(0);
   const mortgagePayoffDate = ref("");
 
@@ -91,6 +102,7 @@ export function useFireSimulatorViewModel() {
     pfee: postFireExtraExpense,
     rlsaf: retirementLumpSumAtFire,
     mpffyee: manualPostFireFirstYearExtraExpense,
+    mpffyeem: isPostFireFirstYearExtraExpenseManual,
     wr: withdrawalRate,
     ib: includeBonus,
     umc: useMonteCarlo,
@@ -100,6 +112,7 @@ export function useFireSimulatorViewModel() {
     mme: manualMonthlyExpense,
     mrmi: manualRegularMonthlyIncome,
     mab: manualAnnualBonus,
+    mabm: isAnnualBonusManual,
     mmp: mortgageMonthlyPayment,
     mpd: mortgagePayoffDate,
   };
@@ -140,6 +153,19 @@ export function useFireSimulatorViewModel() {
     if (dependentBirthDates.value.length <= 1) return;
     dependentBirthDates.value.splice(index, 1);
   };
+
+  watch(manualRegularMonthlyIncome, (newVal) => {
+    if (!isAnnualBonusManual.value) {
+      manualAnnualBonus.value = newVal * DEFAULT_BONUS_RATIO;
+    }
+  });
+
+  watch([manualRegularMonthlyIncome, manualAnnualBonus], ([newIncome, newBonus]) => {
+    if (!isPostFireFirstYearExtraExpenseManual.value) {
+      const annualIncome = newIncome * 12 + newBonus;
+      manualPostFireFirstYearExtraExpense.value = Math.round((annualIncome * DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO) / 10000) * 10000;
+    }
+  });
 
   watch(
     () => {
@@ -405,6 +431,8 @@ export function useFireSimulatorViewModel() {
     pensionConfig,
     manualInitialRiskAssets,
     manualInitialCashAssets,
+    isAnnualBonusManual,
+    isPostFireFirstYearExtraExpenseManual,
     addDependentBirthDate,
     removeDependentBirthDate,
   };
