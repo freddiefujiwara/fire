@@ -230,7 +230,6 @@ export function useFireSimulatorViewModel() {
     retirementLumpSumAtFire: retirementLumpSumAtFire.value,
     includePension: true,
     monthlyInvestment: monthlyInvestment.value,
-    expenseBreakdown: null,
     pensionConfig: pensionConfig.value,
     dependentBirthDate: householdType.value === "family" ? (dependentBirthDates.value[0] || null) : null,
     dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],

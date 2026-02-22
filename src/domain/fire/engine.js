@@ -111,9 +111,7 @@ export function generateAlgorithmExplanationSegments(params) {
       { type: "text", value: `
 ■ 家族構成の変化（子の独立）について
 子が独立する（${independenceAge}歳になる年度）以降は、非住宅ローン部分の生活費に減額係数を適用します。
-・減額係数の決まり方:
-  - 支出内訳がある場合: 食費・教養教育・通信費・衣服美容・日用品の減額ルールから、全体の加重係数を算出して適用
-  - 支出内訳がない場合（family設定）: 既定値として ${defaultReductionText} を適用
+・減額係数（family設定の既定値）: ${defaultReductionText}
 ・住宅ローン返済額は別建てで扱い、完済月（最終支払月）までは固定額、翌月から0円として計算します。
 ` }
     );
@@ -235,32 +233,6 @@ function calculateCurrentMonthlyExpense({
   return inflatedNonMortgage + mortgage;
 }
 
-export function calculateLifestyleReduction(breakdown) {
-  if (!breakdown || !Array.isArray(breakdown) || breakdown.length === 0) {
-    return 1.0;
-  }
-
-  const reductionRules = {
-    "食費": 2 / 3,
-    "教養・教育": 0,
-    "通信費": 2 / 3,
-    "衣服・美容": 2 / 3,
-    "日用品": 2 / 3,
-  };
-
-  let originalTotal = 0;
-  let reducedTotal = 0;
-
-  breakdown.forEach((item) => {
-    originalTotal += item.amount;
-    const multiplier = reductionRules[item.name] ?? 1.0;
-    reducedTotal += item.amount * multiplier;
-  });
-
-  if (originalTotal === 0) return 1.0;
-  return reducedTotal / originalTotal;
-}
-
 function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24) {
   /* c8 ignore next 1 */
   if (!Array.isArray(dependentBirthDates)) return [];
@@ -298,7 +270,6 @@ export function normalizeFireParams(params) {
     includePension: Boolean(params.includePension),
     monthlyInvestment: Number(params.monthlyInvestment ?? 0),
     maxMonths: Number(params.maxMonths ?? 1200),
-    expenseBreakdown: params.expenseBreakdown || null,
     pensionConfig: params.pensionConfig || DEFAULT_PENSION_CONFIG,
     dependentBirthDate: params.dependentBirthDate || null,
     dependentBirthDates: Array.isArray(params.dependentBirthDates)
@@ -356,10 +327,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   const monthlyData = recordMonthly ? [] : null;
 
   const simulationLimit = totalMonthsUntil100;
-  let lifestyleReductionFactor = calculateLifestyleReduction(params.expenseBreakdown);
-  if (lifestyleReductionFactor === 1.0 && householdType === "family") {
-    lifestyleReductionFactor = 0.8; // Default approx 20% reduction if no breakdown provided
-  }
+  const lifestyleReductionFactor = householdType === "family" ? 0.8 : 1.0;
 
   const precalculatedBaseExpenses = [];
   const precalculatedExtraExpenses = [];
