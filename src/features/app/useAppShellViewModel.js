@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import { useUiStore } from "@/stores/ui";
 
 const THEME_STORAGE_KEY = "asset-theme";
@@ -35,7 +35,7 @@ export function useAppShellViewModel() {
     uiStore.togglePrivacy();
   };
 
-  onMounted(() => {
+  const initializeTheme = () => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (savedTheme === "light" || savedTheme === "dark") {
       theme.value = savedTheme;
@@ -43,7 +43,13 @@ export function useAppShellViewModel() {
 
     applyTheme(theme.value);
     document.documentElement.setAttribute("data-private", uiStore.privacyMode ? "on" : "off");
-  });
+  };
+
+  if (getCurrentInstance()) {
+    onMounted(initializeTheme);
+  } else {
+    initializeTheme();
+  }
 
   watch(theme, (nextTheme) => {
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
