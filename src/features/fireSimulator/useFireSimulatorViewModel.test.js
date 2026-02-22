@@ -42,6 +42,7 @@ describe("useFireSimulatorViewModel", () => {
   it("derives key values and export text", async () => {
     const vm = useFireSimulatorViewModel();
     expect(vm.initialAssets.value).toBe(25000000);
+    expect(vm.pensionAnnualAtFire.value).toBeGreaterThan(0);
 
     expect(vm.requiredAssetsAtFire.value).toBe(777);
     expect(vm.copyAnnualTable()).toContain("incomeWithPensionYen");

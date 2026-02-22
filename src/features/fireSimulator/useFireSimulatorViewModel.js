@@ -243,7 +243,14 @@ export function useFireSimulatorViewModel() {
 
   const fireAchievementMonth = computed(() => growthData.value.fireReachedMonth);
   const fireAchievementAge = computed(() => Math.floor(currentAge.value + fireAchievementMonth.value / 12));
-  const pensionAnnualAtFire = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value) * 12);
+  const pensionEstimateAge = computed(() => {
+    const userStart = pensionConfig.value.userStartAge;
+    if (!pensionConfig.value.includeSpouse || householdType.value === "single") {
+      return userStart;
+    }
+    return Math.max(userStart, pensionConfig.value.spouseUserAgeStart);
+  });
+  const pensionAnnualAtFire = computed(() => calculateMonthlyPension(pensionEstimateAge.value, fireAchievementAge.value, pensionConfig.value) * 12);
   const estimatedMonthlyPensionAt60 = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value));
   const pensionParticipationEndAge = computed(() => Math.min(60, fireAchievementAge.value));
   const pensionFutureYears = computed(() => pensionParticipationEndAge.value - pensionConfig.value.pensionDataAge);
