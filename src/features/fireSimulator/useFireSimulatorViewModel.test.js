@@ -113,4 +113,24 @@ describe("useFireSimulatorViewModel", () => {
     await nextTick();
     expect(vm.monteCarloResults.value).toBeNull();
   });
+
+  it("automatically updates bonus and extra expense when regular income changes unless manual flag is set", async () => {
+    const vm = useFireSimulatorViewModel();
+    vm.manualRegularMonthlyIncome.value = 500000;
+    await nextTick();
+    // DEFAULT_BONUS_RATIO = 2.5
+    expect(vm.manualAnnualBonus.value).toBe(500000 * 2.5);
+
+    // Annual income = 500,000 * 12 + 1,250,000 = 7,250,000
+    // DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO = 0.1
+    // Extra = 725,000. Rounded to 10k: Math.round(725000 / 10000) * 10000 = 730000
+    expect(vm.manualPostFireFirstYearExtraExpense.value).toBe(730000);
+
+    // Set manual flag
+    vm.isAnnualBonusManual.value = true;
+    vm.manualAnnualBonus.value = 2000000;
+    vm.manualRegularMonthlyIncome.value = 1000000;
+    await nextTick();
+    expect(vm.manualAnnualBonus.value).toBe(2000000); // Remained manual value
+  });
 });
