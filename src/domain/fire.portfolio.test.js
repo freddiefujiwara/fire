@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
-import * as fireDomain from "./fire";
 import {
-  calculateRiskAssets,
-  calculateExcludedOwnerAssets,
   calculateFirePortfolio,
-  calculateCashAssets,
   calculateDaughterAssetsBreakdown,
   generateAlgorithmExplanationSegments,
 } from "./fire";
@@ -70,83 +66,6 @@ describe("fire domain", () => {
       };
       const segments = generateAlgorithmExplanationSegments(params);
       expect(segments.find(s => s.value.includes("モンテカルロ法"))).toBeDefined();
-    });
-  });
-
-  describe("calculateRiskAssets", () => {
-    it("returns 0 for empty portfolio", () => {
-      expect(calculateRiskAssets(null)).toBe(0);
-      expect(calculateRiskAssets({})).toBe(0);
-    });
-
-    it("sums only risk assets (Stocks, Funds, Pension, etc.)", () => {
-      const portfolio = {
-        summary: {
-          assetsByClass: [
-            { name: "預金・現金", amountYen: 1000 },
-            { name: "株式（現物）", amountYen: 2000 },
-            { name: "投資信託", amountYen: 3000 },
-            { name: "ポイント・マイル", amountYen: 400 },
-            { name: "年金", amountYen: 5000 },
-            { name: "債券", amountYen: 6000 },
-          ],
-        },
-      };
-      // Risk: 2000 + 3000 + 5000 + 6000 = 16000
-      expect(calculateRiskAssets(portfolio)).toBe(16000);
-    });
-  });
-
-  describe("calculateExcludedOwnerAssets", () => {
-    it("returns 0 when holdings are missing", () => {
-      expect(calculateExcludedOwnerAssets(null)).toEqual({ totalAssetsYen: 0, riskAssetsYen: 0 });
-      expect(calculateExcludedOwnerAssets({})).toEqual({ totalAssetsYen: 0, riskAssetsYen: 0 });
-    });
-
-    it("sums only daughter assets and risk assets", () => {
-      const portfolio = {
-        holdings: {
-          cashLike: [
-            { "名称・説明": "普通預金@aojiru.pudding", "残高": "100000" },
-            { "名称・説明": "普通預金", "残高": "300000" },
-          ],
-          stocks: [
-            { "名称・説明": "株A@aojiru.pudding", "現在価値": "200000" },
-            { "名称・説明": "株B", "現在価値": "500000" },
-          ],
-          funds: [
-            { "名称・説明": "投信@aojiru.pudding", "評価額": "300000" },
-          ],
-          pensions: [
-            { "名称・説明": "年金@aojiru.pudding", "現在価値": "400000" },
-          ],
-          points: [
-            { "名称・説明": "ポイント@aojiru.pudding", "残高": "5000" },
-          ],
-        },
-      };
-
-      expect(calculateExcludedOwnerAssets(portfolio, "daughter")).toEqual({
-        totalAssetsYen: 1005000,
-        riskAssetsYen: 900000,
-      });
-    });
-
-    it("handles non-array holdings entries", () => {
-      const portfolio = {
-        holdings: {
-          cashLike: { "名称・説明": "普通預金@aojiru.pudding", "残高": "100000" },
-          stocks: null,
-          funds: undefined,
-          pensions: "invalid",
-          points: 123,
-        },
-      };
-
-      expect(calculateExcludedOwnerAssets(portfolio, "daughter")).toEqual({
-        totalAssetsYen: 0,
-        riskAssetsYen: 0,
-      });
     });
   });
 
@@ -236,26 +155,4 @@ describe("fire domain", () => {
       expect(result.cashAssetsYen).toBe(0);
     });
   });
-
-  describe("calculateCashAssets", () => {
-    it("returns 0 for empty portfolio", () => {
-      expect(calculateCashAssets(null)).toBe(0);
-    });
-
-    it("calculates total assets minus risk assets", () => {
-      const portfolio = {
-        totals: { assetsYen: 10000 },
-        summary: {
-          assetsByClass: [
-            { name: "預金・現金", amountYen: 4000 },
-            { name: "株式（現物）", amountYen: 6000 },
-          ],
-        },
-      };
-      // Total 10000, Risk 6000 -> Cash 4000
-      expect(calculateCashAssets(portfolio)).toBe(4000);
-    });
-  });
-
-
 });

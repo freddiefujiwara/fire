@@ -1,22 +1,16 @@
-import { getUniqueMonths, getExpenseType } from "../cashFlow";
+import { getExpenseType } from "../cashFlow";
 import { formatYen } from "../format";
 import { calculateMonthlyPension, DEFAULT_PENSION_CONFIG } from "./pension";
 import {
-  calculateRiskAssets,
-  calculateExcludedOwnerAssets,
   calculateDaughterAssetsBreakdown,
   calculateFirePortfolio,
-  calculateCashAssets,
 } from "./portfolio";
 
 export {
   calculateMonthlyPension,
   DEFAULT_PENSION_CONFIG,
-  calculateRiskAssets,
-  calculateExcludedOwnerAssets,
   calculateDaughterAssetsBreakdown,
   calculateFirePortfolio,
-  calculateCashAssets,
 };
 
 /**
@@ -175,18 +169,6 @@ export function estimateMonthlyExpenses(cashFlow) {
     averageVariable: Math.round(totalVariableExpense / divisor),
     monthCount: divisor,
   };
-}
-
-export function estimateMonthlyIncome(cashFlow) {
-  const divisor = FIVE_MONTH_LOOKBACK_COUNT;
-  let totalIncome = 0;
-
-  processLookbackCashFlow(cashFlow, (item) => {
-    if (item.amount <= 0) return;
-    totalIncome += item.amount;
-  });
-
-  return Math.round(totalIncome / divisor);
 }
 
 export function estimateIncomeSplit(cashFlow) {

@@ -1,4 +1,4 @@
-import { CASH_FLOW_CONFIG, CATEGORY_DELIMITER, UNCATEGORIZED } from "./constants";
+import { CASH_FLOW_CONFIG } from "./constants";
 
 /**
  * カテゴリ文字列または明細オブジェクトから分類を返す (fixed | variable | exclude)
@@ -18,13 +18,3 @@ export const getExpenseType = (categoryOrItem) => {
   if (CASH_FLOW_CONFIG.FIXED.some((k) => category.includes(k))) return "fixed";
   return "variable"; // それ以外はすべて変動費
 };
-
-export function getCategoryLabel(item) {
-  const category = item?.category;
-  return typeof category === "string" && category.length > 0 ? category : UNCATEGORIZED;
-}
-
-export function getCategoryParts(item) {
-  const [large = UNCATEGORIZED, small = ""] = getCategoryLabel(item).split(CATEGORY_DELIMITER);
-  return { large, small };
-}

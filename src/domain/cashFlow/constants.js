@@ -1,6 +1,3 @@
-export const UNCATEGORIZED = "未分類";
-export const CATEGORY_DELIMITER = "/";
-
 export const CASH_FLOW_CONFIG = {
   FIXED: [
     "住宅/ローン返済",
