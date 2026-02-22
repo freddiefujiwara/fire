@@ -1,6 +1,8 @@
 <script setup>
 import { formatYen } from "@/domain/format";
 import CopyButton from "@/components/CopyButton.vue";
+import { computed } from "vue";
+import { useUiStore } from "@/stores/ui";
 
 defineProps({
   data: { type: Array, required: true },
@@ -8,6 +10,9 @@ defineProps({
 });
 
 defineEmits(["download"]);
+
+const uiStore = useUiStore();
+const isDownloadDisabled = computed(() => uiStore.privacyMode);
 </script>
 
 <template>
@@ -20,7 +25,13 @@ defineEmits(["download"]);
           :copy-value="copyValue"
           disabled-on-privacy
         />
-      <button type="button" class="download-btn" @click.stop="$emit('download')" title="CSVダウンロード / 共有">
+      <button
+        type="button"
+        class="download-btn"
+        @click.stop="$emit('download')"
+        :disabled="isDownloadDisabled"
+        :title="isDownloadDisabled ? 'CSVをダウンロードするにはモザイクを解除してください' : 'CSVダウンロード / 共有'"
+      >
         <span class="icon">📥</span>
         <span class="label">CSV</span>
       </button>
@@ -95,6 +106,13 @@ defineEmits(["download"]);
 }
 .download-btn:hover {
   background: var(--border);
+}
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.download-btn:hover:disabled {
+  background: var(--surface-elevated);
 }
 .download-btn .icon {
   font-size: 1.1rem;

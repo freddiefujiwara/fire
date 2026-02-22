@@ -457,7 +457,7 @@ td {
 
 :root[data-private="on"] .amount-value:not(.is-public),
 :root[data-private="on"] text.amount-value:not(.is-public),
-:root[data-private="on"] .fire-form-grid input:not(.is-public),
+:root[data-private="on"] .fire-form-grid input:not([type="checkbox"]):not(.is-public),
 :root[data-private="on"] .fire-form-grid select:not(.is-public),
 :root[data-private="on"] .privacy-mask:not(.is-public) {
   filter: blur(5px);
