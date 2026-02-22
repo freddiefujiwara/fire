@@ -389,6 +389,7 @@ const {
       <article class="card">
         <h2>FIRE達成年齢</h2>
         <p class="is-positive">{{ fireAchievementAge }}歳</p>
+        <p class="meta">現在{{ currentAge }}歳</p>
       </article>
       <article class="card">
         <h2>FIRE達成に必要な資産</h2>
