@@ -1,16 +1,9 @@
-import { getExpenseType } from "../cashFlow";
-import { formatYen } from "../format";
 import { calculateMonthlyPension, DEFAULT_PENSION_CONFIG } from "./pension";
-import {
-  calculateDaughterAssetsBreakdown,
-  calculateFirePortfolio,
-} from "./portfolio";
+import { formatYen } from "../format";
 
 export {
   calculateMonthlyPension,
   DEFAULT_PENSION_CONFIG,
-  calculateDaughterAssetsBreakdown,
-  calculateFirePortfolio,
 };
 
 /**
@@ -18,7 +11,6 @@ export {
  */
 export function generateAlgorithmExplanationSegments(params) {
   const {
-    daughterBreakdown,
     fireAchievementAge,
     pensionAnnualAtFire,
     withdrawalRatePct,
@@ -28,26 +20,13 @@ export function generateAlgorithmExplanationSegments(params) {
     useMonteCarlo,
     monteCarloTrials,
     monteCarloVolatilityPct,
-    userBirthDate,
     dependentBirthDate,
     independenceAge,
   } = params;
 
-  const daughterDetailStr = daughterBreakdown
-    ? `現金:${formatYen(daughterBreakdown.cash)}, 株式:${formatYen(daughterBreakdown.stocks)}, 投資信託:${formatYen(daughterBreakdown.funds)}, 年金:${formatYen(daughterBreakdown.pensions)}, ポイント:${formatYen(daughterBreakdown.points)}, 負債:${formatYen(daughterBreakdown.liabilities)}`
-    : "なし";
-
   const segments = [
     { type: "text", value: "本シミュレーションは、設定された期待リターン・インフレ率・年金・ローン等のキャッシュフローに基づき、100歳時点で資産が残る最短リタイア年齢を算出しています。\n・必要資産目安は「FIRE達成年齢で退職して100歳まで資産が尽きない最小条件」を満たす達成時点の金融資産額と同じ定義です。\n" },
   ];
-
-  if (daughterBreakdown) {
-    segments.push(
-      { type: "text", value: "・子名義の資産（" },
-      { type: "amount", value: daughterDetailStr },
-      { type: "text", value: "）は初期資産から除外してシミュレーションしています。\n" }
-    );
-  }
 
   segments.push(
     { type: "text", value: "・投資優先順位ルール: 生活防衛資金として現金を維持するため、毎月の投資額は「前月までの貯金残高 + 当月の収支剰余金」を上限として自動調整されます（貯金がマイナスにならないよう制限されます）。\n・FIRE達成後は追加投資を停止し、定期収入（給与・ボーナス等）もゼロになると仮定しています。\n・FIRE達成月には退職金（一括）として " },
@@ -88,172 +67,6 @@ export function generateAlgorithmExplanationSegments(params) {
   );
 
   return segments;
-}
-
-
-const FIVE_MONTH_LOOKBACK_COUNT = 5;
-
-/**
- * Return month keys for past months.
- */
-function getPastMonths(now, count) {
-  const months = [];
-  for (let i = 1; i <= count; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  }
-  return months;
-}
-
-/**
- * Loop past lookback rows and run callback.
- */
-function processLookbackCashFlow(cashFlow, callback) {
-  const now = new Date();
-  const targetMonths = getPastMonths(now, FIVE_MONTH_LOOKBACK_COUNT);
-  const monthSet = new Set(targetMonths);
-
-  cashFlow.forEach((item) => {
-    if (item.isTransfer) return;
-    const month = item.date?.substring(0, 7) || "";
-    if (!monthSet.has(month)) return;
-    callback(item);
-  });
-}
-
-export function estimateMonthlyExpenses(cashFlow) {
-  const divisor = FIVE_MONTH_LOOKBACK_COUNT;
-  const breakdownMap = {};
-  let totalNormalExpense = 0;
-  let totalSpecialExpense = 0;
-  let totalFixedExpense = 0;
-  let totalVariableExpense = 0;
-
-  processLookbackCashFlow(cashFlow, (item) => {
-    if (item.amount >= 0) return;
-
-    const absAmount = Math.abs(item.amount);
-    const category = item.category || "未分類";
-    const type = getExpenseType(item);
-
-    if (type === "exclude") {
-      if (category.startsWith("特別な支出")) {
-        totalSpecialExpense += absAmount;
-      }
-      return;
-    }
-
-    if (type === "fixed") {
-      totalFixedExpense += absAmount;
-    } else if (type === "variable") {
-      totalVariableExpense += absAmount;
-    }
-
-    totalNormalExpense += absAmount;
-    const largeCat = category.split("/")[0];
-    breakdownMap[largeCat] = (breakdownMap[largeCat] || 0) + absAmount;
-  });
-
-  const breakdown = Object.entries(breakdownMap)
-    .map(([name, total]) => ({
-      name,
-      amount: Math.round(total / divisor),
-    }))
-    .sort((a, b) => b.amount - a.amount);
-
-  return {
-    total: Math.round(totalNormalExpense / divisor),
-    breakdown,
-    averageSpecial: Math.round(totalSpecialExpense / divisor),
-    averageFixed: Math.round(totalFixedExpense / divisor),
-    averageVariable: Math.round(totalVariableExpense / divisor),
-    monthCount: divisor,
-  };
-}
-
-export function estimateIncomeSplit(cashFlow) {
-  const divisor = FIVE_MONTH_LOOKBACK_COUNT;
-  let totalRegularIncome = 0;
-  let totalBonusIncome = 0;
-  const regularBreakdownMap = {};
-  const bonusBreakdownMap = {};
-
-  processLookbackCashFlow(cashFlow, (item) => {
-    if (item.amount <= 0) return;
-
-    const category = item.category || "未分類";
-    if (category === "収入/給与") {
-      totalRegularIncome += item.amount;
-      regularBreakdownMap[category] = (regularBreakdownMap[category] || 0) + item.amount;
-    } else if (category.startsWith("収入/")) {
-      totalBonusIncome += item.amount;
-      bonusBreakdownMap[category] = (bonusBreakdownMap[category] || 0) + item.amount;
-    }
-  });
-
-  const regularMonthly = Math.round(totalRegularIncome / divisor);
-  const bonusAnnual = Math.round(totalBonusIncome * (12 / divisor));
-
-  const regularBreakdown = Object.entries(regularBreakdownMap)
-    .map(([name, total]) => ({
-      name,
-      amount: Math.round(total / divisor),
-    }))
-    .sort((a, b) => b.amount - a.amount);
-
-  const bonusBreakdown = Object.entries(bonusBreakdownMap)
-    .map(([name, total]) => ({
-      name,
-      amount: Math.round(total * (12 / divisor)),
-    }))
-    .sort((a, b) => b.amount - a.amount);
-
-  return {
-    regularMonthly,
-    bonusAnnual,
-    monthlyTotal: regularMonthly + bonusAnnual / 12,
-    regularBreakdown,
-    bonusBreakdown,
-    monthCount: divisor,
-  };
-}
-
-export function getPast5MonthSummary(cashFlow) {
-  const expenses = estimateMonthlyExpenses(cashFlow);
-  const income = estimateIncomeSplit(cashFlow);
-
-  return {
-    monthlyLivingExpenses: {
-      average: expenses.total,
-      breakdown: expenses.breakdown,
-      averageSpecial: expenses.averageSpecial,
-    },
-    monthlyRegularIncome: {
-      average: income.regularMonthly,
-      breakdown: income.regularBreakdown,
-    },
-    annualBonus: {
-      average: income.bonusAnnual,
-      breakdown: income.bonusBreakdown,
-    },
-    avgFixedMonthly: expenses.averageFixed,
-    avgVariableMonthly: expenses.averageVariable,
-    monthCount: expenses.monthCount,
-  };
-}
-
-export function estimateMortgageMonthlyPayment(cashFlow) {
-  const divisor = FIVE_MONTH_LOOKBACK_COUNT;
-  let totalMortgage = 0;
-
-  processLookbackCashFlow(cashFlow, (item) => {
-    if (item.amount >= 0) return;
-    if ((item.category || "").startsWith("住宅/ローン返済")) {
-      totalMortgage += Math.abs(item.amount);
-    }
-  });
-
-  return Math.round(totalMortgage / divisor);
 }
 
 function calculateRequiredAssets({

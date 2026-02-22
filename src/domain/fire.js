@@ -1,11 +1,7 @@
 export {
   calculateMonthlyPension,
   DEFAULT_PENSION_CONFIG,
-  calculateDaughterAssetsBreakdown,
   generateAlgorithmExplanationSegments,
-  calculateFirePortfolio,
-  getPast5MonthSummary,
-  estimateMortgageMonthlyPayment,
   calculateLifestyleReduction,
   normalizeFireParams,
   performFireSimulation,

@@ -2,8 +2,6 @@
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
 
 const {
-  loading,
-  error,
   formatYen,
   CopyButton,
   FireSimulationTable,
@@ -18,7 +16,6 @@ const {
   postFireExtraExpense,
   retirementLumpSumAtFire,
   manualPostFireFirstYearExtraExpense,
-  useAutoFirstYearExtra,
   withdrawalRate,
   includeBonus,
   useMonteCarlo,
@@ -30,11 +27,8 @@ const {
   cashAssets,
   monthsOfCash,
   manualMonthlyExpense,
-  useAutoExpense,
   manualRegularMonthlyIncome,
   manualAnnualBonus,
-  useAutoIncome,
-  useAutoBonus,
   mortgageMonthlyPayment,
   mortgagePayoffDate,
   monthlyExpense,
@@ -56,7 +50,6 @@ const {
   algorithmExplanationSegments,
   copyConditionsAndAlgorithm,
   copyAnnualTable,
-  mortgageOptions,
   // New exports
   householdType,
   userBirthDate,
@@ -71,9 +64,6 @@ const {
 
 <template>
   <section>
-    <p v-if="loading">読み込み中...</p>
-    <p v-if="error" class="error">{{ error }}</p>
-
     <div class="filter-section table-wrap">
       <h3 class="section-title">基本設定 (家族・資産)</h3>
       <div class="fire-form-grid">
@@ -158,34 +148,25 @@ const {
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>生活費 (月額)</label>
-            <label class="auto-toggle is-public">
-              <input type="checkbox" v-model="useAutoExpense" class="is-public" /> 自動算出 (API連携時)
-            </label>
           </div>
-          <input v-model.number="manualMonthlyExpense" type="number" step="10000" :disabled="useAutoExpense" />
+          <input v-model.number="manualMonthlyExpense" type="number" step="10000" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>定期収入 (月額)</label>
-            <label class="auto-toggle is-public">
-              <input type="checkbox" v-model="useAutoIncome" class="is-public" /> 自動算出 (API連携時)
-            </label>
           </div>
-          <input v-model.number="manualRegularMonthlyIncome" type="number" step="10000" :disabled="useAutoIncome" />
+          <input v-model.number="manualRegularMonthlyIncome" type="number" step="10000" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>ボーナス (年額)</label>
             <div class="toggle-group">
               <label class="auto-toggle is-public">
-                <input type="checkbox" v-model="useAutoBonus" class="is-public" /> 自動算出
-              </label>
-              <label class="auto-toggle is-public">
                 <input type="checkbox" v-model="includeBonus" class="is-public" /> ボーナスを考慮
               </label>
             </div>
           </div>
-          <input v-model.number="manualAnnualBonus" type="number" step="10000" :disabled="useAutoBonus || !includeBonus" />
+          <input v-model.number="manualAnnualBonus" type="number" step="10000" :disabled="!includeBonus" />
         </div>
         <div class="filter-item">
           <label>住宅ローン月額 (円)</label>
@@ -224,11 +205,8 @@ const {
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>FIRE1年目の追加支出 (年額)</label>
-            <label class="auto-toggle is-public">
-              <input type="checkbox" v-model="useAutoFirstYearExtra" class="is-public" /> 自動算出
-            </label>
           </div>
-          <input v-model.number="manualPostFireFirstYearExtraExpense" type="number" step="100000" :disabled="useAutoFirstYearExtra" />
+          <input v-model.number="manualPostFireFirstYearExtraExpense" type="number" step="100000" />
         </div>
       </div>
 

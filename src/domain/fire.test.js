@@ -1,16 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as fireDomain from "./fire";
 import {
-  calculateFirePortfolio,
-  estimateMortgageMonthlyPayment,
   generateGrowthTable,
   generateAnnualSimulation,
   calculateMonthlyPension,
   normalizeFireParams,
-  calculateDaughterAssetsBreakdown,
-  generateAlgorithmExplanationSegments,
   performFireSimulation,
-  getPast5MonthSummary,
   calculateLifestyleReduction,
 } from "./fire";
 
@@ -18,11 +13,7 @@ describe("fire domain", () => {
   it("keeps expected exported functions on the fire barrel", () => {
     expect(fireDomain).toMatchObject({
       calculateMonthlyPension: expect.any(Function),
-      calculateDaughterAssetsBreakdown: expect.any(Function),
       generateAlgorithmExplanationSegments: expect.any(Function),
-      calculateFirePortfolio: expect.any(Function),
-      getPast5MonthSummary: expect.any(Function),
-      estimateMortgageMonthlyPayment: expect.any(Function),
       calculateLifestyleReduction: expect.any(Function),
       normalizeFireParams: expect.any(Function),
       performFireSimulation: expect.any(Function),
@@ -62,79 +53,6 @@ describe("fire domain", () => {
       const result = normalizeFireParams({ currentAge: 0, initialAssets: 0 });
       expect(result.currentAge).toBe(40); // 0 is treated as missing and falls back to 40
       expect(result.initialAssets).toBe(0); // initialAssets uses ?? 0, so 0 is kept
-    });
-  });
-
-  describe("getPast5MonthSummary", () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-03-15T09:00:00+09:00"));
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it("aggregates expenses and income into a combined summary object", () => {
-      const cashFlow = [
-        { date: "2026-02-01", amount: -1000, isTransfer: false, category: "食費/外食" }, // variable
-        { date: "2026-02-01", amount: -500, isTransfer: false, category: "住宅/ローン返済" }, // fixed
-        { date: "2026-02-01", amount: 300000, isTransfer: false, category: "収入/給与" },
-        { date: "2026-01-01", amount: 100000, isTransfer: false, category: "収入/賞与" },
-      ];
-
-      const result = getPast5MonthSummary(cashFlow);
-      expect(result.monthlyLivingExpenses.average).toBe(300); // 1500 / 5
-      expect(result.avgFixedMonthly).toBe(100); // 500 / 5
-      expect(result.avgVariableMonthly).toBe(200); // 1000 / 5
-      expect(result.monthlyRegularIncome.average).toBe(60000); // 300,000 / 5
-      expect(result.annualBonus.average).toBe(240000); // 100,000 * (12 / 5)
-      expect(result.monthCount).toBe(5);
-      expect(result.monthlyLivingExpenses.breakdown).toHaveLength(2);
-      expect(result.monthlyLivingExpenses.averageSpecial).toBe(0);
-    });
-
-    it("includes special expenses average in the summary", () => {
-      const cashFlow = [
-        { date: "2026-02-01", amount: -5000, isTransfer: false, category: "特別な支出/旅行" },
-      ];
-      const result = getPast5MonthSummary(cashFlow);
-      expect(result.monthlyLivingExpenses.averageSpecial).toBe(1000);
-    });
-  });
-
-  describe("estimateMortgageMonthlyPayment", () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-03-15T09:00:00+09:00"));
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it("estimates monthly mortgage payment from 住宅/ローン返済 category", () => {
-      const cashFlow = [
-        { date: "2026-02-01", amount: -120000, isTransfer: false, category: "住宅/ローン返済" },
-        { date: "2026-01-01", amount: -120000, isTransfer: false, category: "住宅/ローン返済" },
-        { date: "2025-12-01", amount: -120000, isTransfer: false, category: "住宅/ローン返済" },
-        { date: "2025-11-01", amount: -120000, isTransfer: false, category: "住宅/ローン返済" },
-        { date: "2025-10-01", amount: -120000, isTransfer: false, category: "住宅/ローン返済" },
-        { date: "2026-02-01", amount: -10000, isTransfer: false, category: "住宅/管理費" },
-      ];
-
-      expect(estimateMortgageMonthlyPayment(cashFlow)).toBe(120000);
-    });
-
-    it("handles edge cases for coverage in mortgage estimation", () => {
-      const cashFlow = [
-        { date: "2026-02-01", amount: -100, isTransfer: true, category: "住宅/ローン返済" }, // transfer
-        { date: "2026-02-01", amount: 100, isTransfer: false, category: "住宅/ローン返済" }, // amount >= 0
-        { date: "2026-03-01", amount: -100, isTransfer: false, category: "住宅/ローン返済" }, // current month excluded
-        { date: "2026-02-01", amount: -100, isTransfer: false }, // missing category
-        { date: null, amount: -100, isTransfer: false, category: "住宅/ローン返済" }, // missing date
-      ];
-      expect(estimateMortgageMonthlyPayment(cashFlow)).toBe(0);
     });
   });
 
