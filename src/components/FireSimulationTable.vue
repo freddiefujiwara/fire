@@ -4,11 +4,19 @@ import { formatYen } from "@/domain/format";
 defineProps({
   data: { type: Array, required: true },
 });
+
+defineEmits(["download"]);
 </script>
 
 <template>
   <div class="chart-card simulation-table-card">
-    <h3 class="section-title">年齢別収支推移表</h3>
+    <div class="table-header">
+      <button class="download-btn" @click="$emit('download')" title="CSVダウンロード / 共有">
+        <span class="icon">📥</span>
+        <span class="label">CSV</span>
+      </button>
+      <h3 class="section-title">年齢別収支推移表</h3>
+    </div>
     <div class="table-wrapper">
       <table class="simulation-table">
         <thead>
@@ -45,6 +53,44 @@ defineProps({
 <style scoped>
 .simulation-table-card {
   margin-top: 24px;
+}
+.table-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.table-header .section-title {
+  margin: 0;
+}
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.download-btn:hover {
+  background: var(--border);
+}
+.download-btn .icon {
+  font-size: 1.1rem;
+}
+@media (max-width: 640px) {
+  .download-btn {
+    padding: 8px;
+  }
+  .download-btn .label {
+    display: none;
+  }
 }
 .table-wrapper {
   overflow-x: auto;

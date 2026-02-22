@@ -1,5 +1,6 @@
 <script setup>
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
+import NumericInput from "@/components/NumericInput.vue";
 
 const {
   formatYen,
@@ -99,12 +100,12 @@ const {
           </div>
         </div>
         <div class="filter-item">
-          <label>初期リスク資産 (円)</label>
-          <input v-model.number="manualInitialRiskAssets" type="number" step="1000000" />
+          <label for="risk-assets">初期リスク資産 (円)</label>
+          <NumericInput id="risk-assets" v-model="manualInitialRiskAssets" :step="1000000" />
         </div>
         <div class="filter-item">
-          <label>初期現金資産 (円)</label>
-          <input v-model.number="manualInitialCashAssets" type="number" step="1000000" />
+          <label for="cash-assets">初期現金資産 (円)</label>
+          <NumericInput id="cash-assets" v-model="manualInitialCashAssets" :step="1000000" />
         </div>
       </div>
 
@@ -113,19 +114,19 @@ const {
         <div class="fire-form-grid" style="margin-top: 10px;">
           <div class="filter-item">
             <label>年金開始年齢 (本人)</label>
-            <input v-model.number="pensionConfig.userStartAge" type="number" />
+            <NumericInput v-model="pensionConfig.userStartAge" />
           </div>
           <div class="filter-item" v-if="householdType !== 'single'">
             <label>配偶者年金開始 (本人年齢)</label>
-            <input v-model.number="pensionConfig.spouseUserAgeStart" type="number" />
+            <NumericInput v-model="pensionConfig.spouseUserAgeStart" />
           </div>
           <div class="filter-item">
             <label>厚生年金既発生額 (年額)</label>
-            <input v-model.number="pensionConfig.userKoseiAccruedAtDataAgeAnnualYen" type="number" step="10000" />
+            <NumericInput v-model="pensionConfig.userKoseiAccruedAtDataAgeAnnualYen" :step="10000" />
           </div>
           <div class="filter-item">
             <label>今後の厚生年金増分 (年額/年)</label>
-            <input v-model.number="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" type="number" step="1000" />
+            <NumericInput v-model="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" :step="1000" />
           </div>
           <div class="filter-item" v-if="householdType !== 'single'" style="flex-direction: row; align-items: center; gap: 8px;">
              <input type="checkbox" v-model="pensionConfig.includeSpouse" id="includeSpouse" />
@@ -158,11 +159,11 @@ const {
                 </label>
               </div>
             </div>
-            <input v-model.number="manualAnnualBonus" type="number" step="10000" :disabled="!includeBonus" @input="isAnnualBonusManual = true" />
+            <NumericInput v-model="manualAnnualBonus" :step="10000" :disabled="!includeBonus" @input="isAnnualBonusManual = true" />
           </div>
           <div class="filter-item">
             <label>住宅ローン月額 (円)</label>
-            <input v-model.number="mortgageMonthlyPayment" type="number" step="10000" />
+            <NumericInput v-model="mortgageMonthlyPayment" :step="10000" />
           </div>
           <div class="filter-item">
             <label>ローン完済年月</label>
@@ -186,19 +187,19 @@ const {
           </div>
           <div class="filter-item">
             <label>FIRE後の社会保険料・税(月額)</label>
-            <input v-model.number="postFireExtraExpense" type="number" step="5000" />
+            <NumericInput v-model="postFireExtraExpense" :step="5000" />
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
               <label>FIRE達成時の退職金 (円)</label>
             </div>
-            <input v-model.number="retirementLumpSumAtFire" type="number" step="100000" />
+            <NumericInput v-model="retirementLumpSumAtFire" :step="100000" />
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
               <label>FIRE1年目の追加支出 (年額)</label>
             </div>
-            <input v-model.number="manualPostFireFirstYearExtraExpense" type="number" step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
+            <NumericInput v-model="manualPostFireFirstYearExtraExpense" :step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
           </div>
         </div>
       </details>
@@ -207,19 +208,19 @@ const {
       <div class="fire-form-grid">
         <div class="filter-item">
           <label>毎月の投資額 (円)</label>
-          <input v-model.number="monthlyInvestment" type="number" step="10000" />
+          <NumericInput v-model="monthlyInvestment" :step="10000" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>生活費 (月額)</label>
           </div>
-          <input v-model.number="manualMonthlyExpense" type="number" step="10000" />
+          <NumericInput v-model="manualMonthlyExpense" :step="10000" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>定期収入 (月額)</label>
           </div>
-          <input v-model.number="manualRegularMonthlyIncome" type="number" step="10000" />
+          <NumericInput v-model="manualRegularMonthlyIncome" :step="10000" />
         </div>
       </div>
 
@@ -408,7 +409,7 @@ const {
           disabled-on-privacy
         />
       </div>
-      <FireSimulationTable :data="annualSimulationData" />
+      <FireSimulationTable :data="annualSimulationData" @download="downloadAnnualTableCsv" />
     </div>
 
   </section>
@@ -430,6 +431,7 @@ const {
   font-size: 0.85rem;
   color: var(--muted);
 }
+.filter-item input[type="text"],
 .filter-item input[type="number"],
 .filter-item input[type="date"],
 .filter-item input[type="month"],

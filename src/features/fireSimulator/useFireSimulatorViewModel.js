@@ -25,6 +25,7 @@ import {
   formatMonths,
   buildAnnualTableJson,
   buildConditionsAndAlgorithmJson,
+  generateCsv,
 } from "@/features/fireSimulator/formatters";
 
 export function useFireSimulatorViewModel() {
@@ -369,6 +370,43 @@ export function useFireSimulatorViewModel() {
 
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
+  async function downloadAnnualTableCsv() {
+    const csv = generateCsv(annualSimulationData.value);
+    const fileName = `fire_simulation_${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'text/csv' })] })) {
+      try {
+        const file = new File([blob], fileName, { type: 'text/csv' });
+        await navigator.share({
+          files: [file],
+          title: 'FIRE シミュレーション結果',
+          text: '年齢別収支推移表',
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Share failed:', err);
+          // Fallback to download
+          triggerDownload(blob, fileName);
+        }
+      }
+    } else {
+      triggerDownload(blob, fileName);
+    }
+  }
+
+  function triggerDownload(blob, fileName) {
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
+
   return {
     formatYen,
     CopyButton,
@@ -421,6 +459,7 @@ export function useFireSimulatorViewModel() {
     algorithmExplanationSegments,
     copyConditionsAndAlgorithm,
     copyAnnualTable,
+    downloadAnnualTableCsv,
     mortgageOptions: computed(() => createMortgageOptions()),
     // New exports
     householdType,
