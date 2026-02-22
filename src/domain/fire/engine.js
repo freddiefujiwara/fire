@@ -91,7 +91,7 @@ export function generateAlgorithmExplanationSegments(params) {
   - リタイアに伴う厚生年金加入期間の停止を考慮。
   - 繰上げ受給等の減額率設定を反映。
 
-住宅ローンの完済月以降は、月間支出からローン返済額を自動的に差し引いてシミュレーションを継続します。
+住宅ローンは完済月（最終支払月）までは返済額を含め、完済月の翌月以降は月間支出から返済額を自動的に差し引いてシミュレーションを継続します。
 ` }
   );
 
@@ -114,7 +114,7 @@ export function generateAlgorithmExplanationSegments(params) {
 ・減額係数の決まり方:
   - 支出内訳がある場合: 食費・教養教育・通信費・衣服美容・日用品の減額ルールから、全体の加重係数を算出して適用
   - 支出内訳がない場合（family設定）: 既定値として ${defaultReductionText} を適用
-・住宅ローン返済額は別建てで扱い、完済月までは固定額、完済後は0円として計算します。
+・住宅ローン返済額は別建てで扱い、完済月（最終支払月）までは固定額、翌月から0円として計算します。
 ` }
     );
   }
@@ -595,8 +595,8 @@ export function generateAnnualSimulation(params) {
     const withdrawal = slice.reduce((sum, m) => sum + m.withdrawal, 0);
     const gain = slice.reduce((sum, m) => sum + m.investmentGain, 0);
     const firstMonth = monthlyData[startIdx];
-    const endMonth = (endIdx < monthlyData.length) ? monthlyData[endIdx] : monthlyData[endIdx - 1];
-    const endCash = (endIdx < monthlyData.length) ? monthlyData[endIdx].cashAssets : monthlyData[endIdx - 1].cashAssets;
+    const endMonth = monthlyData[endIdx - 1];
+    const endCash = monthlyData[endIdx - 1].cashAssets;
     const fireMonthInYear = fireReachedMonth >= startIdx && fireReachedMonth < endIdx
       ? fireReachedMonth
       : null;

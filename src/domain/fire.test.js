@@ -410,6 +410,31 @@ describe("fire domain", () => {
       expect(result.monthlyData[171].expenses).toBe(140000);
       vi.useRealTimers();
     });
+    it("applies default 20% reduction for 1 child after independence when no breakdown is provided", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-05-14T09:00:00+09:00"));
+
+      const result = performFireSimulation({
+        initialAssets: 100000000,
+        riskAssets: 0,
+        monthlyExpense: 200000,
+        currentAge: 45,
+        includeInflation: false,
+        includePension: false,
+        retirementLumpSumAtFire: 0,
+        withdrawalRate: 0,
+        maxMonths: 180,
+        householdType: "family",
+        dependentBirthDates: ["2013-02-20"],
+        independenceAge: 24,
+      }, { recordMonthly: true, forceFireMonth: 0 });
+
+      // 独立前は1.0、独立後は0.8
+      expect(result.monthlyData[142].expenses).toBe(200000);
+      expect(result.monthlyData[143].expenses).toBe(160000);
+      vi.useRealTimers();
+    });
+
     it("handles extreme negative flow with current assets", () => {
        const result = generateGrowthTable({
          ...params,
@@ -712,6 +737,27 @@ describe("fire domain", () => {
       expect(result[0].income).toBe(3600000);
       expect(result[0].expenses).toBe(2400000);
     });
+    it("uses month 11 as year-end values for the first annual row", () => {
+      const input = {
+        ...params,
+        initialAssets: 2000000,
+        riskAssets: 0,
+        monthlyIncome: 0,
+        monthlyExpense: 100000,
+        annualReturnRate: 0,
+        includeInflation: false,
+        includePension: false,
+        withdrawalRate: 0,
+        retirementLumpSumAtFire: 0,
+      };
+
+      const annual = generateAnnualSimulation(input);
+      const monthly = performFireSimulation(input, { recordMonthly: true }).monthlyData;
+
+      expect(annual[0].assetsYearEnd).toBe(Math.round(monthly[11].assets));
+      expect(annual[0].assetsYearEnd).not.toBe(Math.round(monthly[12].assets));
+    });
+
 
     it("handles pension and transition to FIRE", () => {
       const result = generateAnnualSimulation({
