@@ -3,9 +3,21 @@ import * as fireDomain from "./fire";
 import { calculateMonthlyPension } from "./fire";
 
 describe("fire domain", () => {
+  const legacyConfig = {
+    userStartAge: 60,
+    spouseUserAgeStart: 62,
+    basicFullAnnualYen: 780000,
+    basicReduction: 0.9,
+    earlyReduction: 0.76,
+    pensionDataAge: 44,
+    userKoseiAccruedAtDataAgeAnnualYen: 892252,
+    userKoseiFutureFactorAnnualYenPerYear: 42000,
+    includeSpouse: true,
+  };
+
   describe("calculateMonthlyPension", () => {
     it("returns 0 before age 60", () => {
-      expect(calculateMonthlyPension(59.9, 50)).toBe(0);
+      expect(calculateMonthlyPension(59.9, 50, legacyConfig)).toBe(0);
     });
 
     it("returns approx 116,929 (1.4M / 12) at age 60 if FIRE at 50", () => {
@@ -14,14 +26,14 @@ describe("fire domain", () => {
       // User Kosei (60): 1,144,252 * 0.76 = 869,632
       // Total (60): 533,520 + 869,632 = 1,403,152
       // Monthly: 1,403,152 / 12 = 116,929
-      expect(calculateMonthlyPension(60, 50)).toBe(116929);
+      expect(calculateMonthlyPension(60, 50, legacyConfig)).toBe(116929);
     });
 
     it("adds spouse pension (approx 65,000) at user age 62", () => {
       // User part: 116,929
       // Spouse part: 780,000 / 12 = 65,000
       // Total: 116,929 + 65,000 = 181,929
-      expect(calculateMonthlyPension(62, 50)).toBe(181929);
+      expect(calculateMonthlyPension(62, 50, legacyConfig)).toBe(181929);
     });
 
     it("adjusts user pension based on FIRE age", () => {
@@ -31,12 +43,12 @@ describe("fire domain", () => {
       // User Kosei (60): 892,252 * 0.76 = 678,112
       // Total (60): 533,520 + 678,112 = 1,211,632
       // Monthly: 1,211,632 / 12 = 100,969
-      expect(calculateMonthlyPension(60, 40)).toBe(100969);
+      expect(calculateMonthlyPension(60, 40, legacyConfig)).toBe(100969);
     });
 
     it("caps participation at age 60", () => {
       // FIRE at 65, but participation for pension calculation caps at 60
-      expect(calculateMonthlyPension(60, 65)).toBe(calculateMonthlyPension(60, 60));
+      expect(calculateMonthlyPension(60, 65, legacyConfig)).toBe(calculateMonthlyPension(60, 60, legacyConfig));
     });
   });
 

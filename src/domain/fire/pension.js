@@ -1,11 +1,11 @@
 export const DEFAULT_PENSION_CONFIG = {
-  userStartAge: 60,
-  spouseUserAgeStart: 62,
+  userStartAge: 65,
+  spouseUserAgeStart: 65,
   basicFullAnnualYen: 780000,
   basicReduction: 0.9,
   earlyReduction: 0.76,
   pensionDataAge: 44,
-  userKoseiAccruedAtDataAgeAnnualYen: 892252,
+  userKoseiAccruedAtDataAgeAnnualYen: 1000000,
   userKoseiFutureFactorAnnualYenPerYear: 42000,
   includeSpouse: true,
 };
