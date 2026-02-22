@@ -37,6 +37,7 @@ describe("useFireSimulatorViewModel", () => {
     expect(vm.requiredAssetsAtFire.value).toBe(777);
     expect(vm.copyAnnualTable()).toContain("incomeWithPensionYen");
     expect(vm.copyConditionsAndAlgorithm()).toContain("pensionConfig");
+    expect(vm.copyConditionsAndAlgorithm()).toContain("mortgageMonthlyPaymentYen");
   });
 
   it("initializes from URL if 'p' path parameter is present", async () => {

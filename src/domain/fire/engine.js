@@ -44,7 +44,14 @@ export function generateAlgorithmExplanationSegments(params) {
 
   if (dependentBirthDate) {
     segments.push(
-      { type: "text", value: `\n■ 家族構成の変化（子の独立）について\n子が独立する（${independenceAge}歳になる年度）以降は、家族人数が減少するものとして生活費を見直します。\n・対象カテゴリと減額率:\n  - 食費: 約3割減 (x2/3)\n  - 教養・教育: ほぼゼロ (¥0)\n  - 通信費: 約3割減 (x2/3)\n  - 衣服・美容: 約3割減 (x2/3)\n  - 日用品: 約3割減 (x2/3)\n・その他のカテゴリ（住居・光熱費・保険等）は変更なしと仮定しています。\n` }
+      { type: "text", value: `
+■ 家族構成の変化（子の独立）について
+子が独立する（${independenceAge}歳になる年度）以降は、非住宅ローン部分の生活費に減額係数を適用します。
+・減額係数の決まり方:
+  - 支出内訳がある場合: 食費・教養教育・通信費・衣服美容・日用品の減額ルールから、全体の加重係数を算出して適用
+  - 支出内訳がない場合（family設定）: 既定値として 0.8（約2割減）を適用
+・住宅ローン返済額は別建てで扱い、完済月までは固定額、完済後は0円として計算します。
+` }
     );
   }
 
@@ -273,7 +280,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   const simulationLimit = totalMonthsUntil100;
   let lifestyleReductionFactor = calculateLifestyleReduction(params.expenseBreakdown);
   if (lifestyleReductionFactor === 1.0 && householdType === "family") {
-    lifestyleReductionFactor = 0.7; // Default approx 30% reduction if no breakdown provided
+    lifestyleReductionFactor = 0.8; // Default approx 20% reduction if no breakdown provided
   }
 
   for (let m = 0; m <= simulationLimit; m++) {
