@@ -403,14 +403,11 @@ const {
 
     <div class="main-visualization">
       <FireSimulationChart :data="annualSimulationData" :annotations="chartAnnotations" :monte-carlo-paths="monteCarloResults" />
-      <div class="copy-actions table-copy-action">
-        <CopyButton
-          label="📋 年齢別収支推移表をコピー"
-          :copy-value="copyAnnualTable"
-          disabled-on-privacy
-        />
-      </div>
-      <FireSimulationTable :data="annualSimulationData" @download="downloadAnnualTableCsv" />
+      <FireSimulationTable
+        :data="annualSimulationData"
+        :copy-value="copyAnnualTable"
+        @download="downloadAnnualTableCsv"
+      />
     </div>
 
   </section>

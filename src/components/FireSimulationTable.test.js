@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import FireSimulationTable from "./FireSimulationTable.vue";
 
 describe("FireSimulationTable.vue", () => {
+  setActivePinia(createPinia());
+
   const sampleData = [
     {
       age: 45,
@@ -31,6 +34,9 @@ describe("FireSimulationTable.vue", () => {
   it("renders table rows based on data", () => {
     const wrapper = mount(FireSimulationTable, {
       props: { data: sampleData },
+      global: {
+        plugins: [createPinia()],
+      },
     });
 
     const rows = wrapper.findAll("tbody tr");
@@ -48,6 +54,9 @@ describe("FireSimulationTable.vue", () => {
   it("applies is-negative class when withdrawal > 0", () => {
     const wrapper = mount(FireSimulationTable, {
       props: { data: sampleData },
+      global: {
+        plugins: [createPinia()],
+      },
     });
     const rows = wrapper.findAll("tbody tr");
 

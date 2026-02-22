@@ -1,8 +1,10 @@
 <script setup>
 import { formatYen } from "@/domain/format";
+import CopyButton from "@/components/CopyButton.vue";
 
 defineProps({
   data: { type: Array, required: true },
+  copyValue: { type: [Function, String], default: "" },
 });
 
 defineEmits(["download"]);
@@ -11,11 +13,18 @@ defineEmits(["download"]);
 <template>
   <div class="chart-card simulation-table-card">
     <div class="table-header">
+      <h3 class="section-title">年齢別収支推移表</h3>
+      <div class="table-actions">
+        <CopyButton
+          label="📋 年齢別収支推移表をコピー"
+          :copy-value="copyValue"
+          disabled-on-privacy
+        />
       <button type="button" class="download-btn" @click.stop="$emit('download')" title="CSVダウンロード / 共有">
         <span class="icon">📥</span>
         <span class="label">CSV</span>
       </button>
-      <h3 class="section-title">年齢別収支推移表</h3>
+      </div>
     </div>
     <div class="table-wrapper">
       <table class="simulation-table">
@@ -57,11 +66,17 @@ defineEmits(["download"]);
 .table-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 8px;
 }
 .table-header .section-title {
   margin: 0;
+}
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .download-btn {
   display: flex;
