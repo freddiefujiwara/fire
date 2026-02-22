@@ -119,6 +119,7 @@ export function useFireSimulatorViewModel() {
   };
 
   let pensionDataAgeLoadedFromUrl = false;
+  let basicReductionLoadedFromUrl = false;
   const loadFromUrl = () => {
     const p = route.params.p;
     if (p) {
@@ -129,6 +130,7 @@ export function useFireSimulatorViewModel() {
             if (key === "pc") {
               refVar.value = { ...refVar.value, ...decoded[key] };
               pensionDataAgeLoadedFromUrl = decoded[key]?.pensionDataAge !== undefined;
+              basicReductionLoadedFromUrl = decoded[key]?.basicReduction !== undefined;
             } else {
               refVar.value = decoded[key];
             }
@@ -144,6 +146,9 @@ export function useFireSimulatorViewModel() {
   loadFromUrl();
   if (!pensionDataAgeLoadedFromUrl) {
     pensionConfig.value.pensionDataAge = currentAge.value;
+  }
+  if (!basicReductionLoadedFromUrl && route.params.p) {
+    pensionConfig.value.basicReduction = 1.0;
   }
   if (!Array.isArray(dependentBirthDates.value)) {
     dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
