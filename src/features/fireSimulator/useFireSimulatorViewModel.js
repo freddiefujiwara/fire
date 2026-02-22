@@ -370,7 +370,7 @@ export function useFireSimulatorViewModel() {
 
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
-  function downloadAnnualTableCsv() {
+  async function downloadAnnualTableCsv() {
     const data = annualSimulationData.value;
     if (!data || data.length === 0) return;
 
@@ -382,17 +382,18 @@ export function useFireSimulatorViewModel() {
     if (navigator.share && navigator.canShare) {
       const file = new File([blob], fileName, { type: 'text/csv' });
       if (navigator.canShare({ files: [file] })) {
-        navigator.share({
-          files: [file],
-          title: 'FIRE シミュレーション結果',
-          text: '年齢別収支推移表',
-        }).catch(err => {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'FIRE シミュレーション結果',
+            text: '年齢別収支推移表',
+          });
+          return;
+        } catch (err) {
           if (err.name !== 'AbortError') {
             console.error('Share failed:', err);
-            triggerDownload(blob, fileName);
           }
-        });
-        return;
+        }
       }
     }
 
@@ -400,11 +401,40 @@ export function useFireSimulatorViewModel() {
     triggerDownload(blob, fileName);
   }
 
+  function isLikelySafari() {
+    const ua = navigator.userAgent;
+    return /^((?!chrome|android).)*safari/i.test(ua);
+  }
+
+  function isIOS() {
+    const ua = navigator.userAgent;
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
   function triggerDownload(blob, fileName) {
+    if (window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(blob, fileName);
+      return;
+    }
+
+    if (isIOS() && isLikelySafari()) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const popup = window.open(reader.result, '_blank');
+        if (!popup) {
+          alert('ダウンロードを開始できませんでした。ブラウザのポップアップブロック設定をご確認ください。');
+        }
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute('download', fileName);
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener');
 
     // For iOS Safari, the link sometimes needs to be in the DOM and visible (but hidden)
     link.style.position = 'fixed';
@@ -415,16 +445,7 @@ export function useFireSimulatorViewModel() {
 
     document.body.appendChild(link);
 
-    // Standard click
     link.click();
-
-    // Fallback for some browsers: dispatch a manual click event
-    const clickEvent = new MouseEvent('click', {
-      view: window,
-      bubbles: true,
-      cancelable: true
-    });
-    link.dispatchEvent(clickEvent);
 
     // Delay cleanup to ensure browser has started the download
     setTimeout(() => {
