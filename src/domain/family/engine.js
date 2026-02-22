@@ -1,7 +1,7 @@
 // Default values for backward compatibility or initial state
-export const DEFAULT_USER_BIRTH_DATE = "1979-09-02";
-export const DEFAULT_SPOUSE_BIRTH_DATE = "1976-04-23";
-export const DEFAULT_DEPENDENT_BIRTH_DATE = "2013-02-20";
+export const DEFAULT_USER_BIRTH_DATE = "1980-07-07";
+export const DEFAULT_SPOUSE_BIRTH_DATE = "1982-08-08";
+export const DEFAULT_DEPENDENT_BIRTH_DATE = "2012-09-09";
 
 /**
  * Calculate age based on birth date string and a base date.
