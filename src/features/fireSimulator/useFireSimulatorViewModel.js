@@ -25,6 +25,7 @@ import {
   formatMonths,
   buildAnnualTableJson,
   buildConditionsAndAlgorithmJson,
+  generateCsv,
 } from "@/features/fireSimulator/formatters";
 
 export function useFireSimulatorViewModel() {
@@ -369,6 +370,71 @@ export function useFireSimulatorViewModel() {
 
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
+  function downloadAnnualTableCsv() {
+    const data = annualSimulationData.value;
+    if (!data || data.length === 0) return;
+
+    const csv = generateCsv(data);
+    const fileName = `fire_simulation_${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+
+    // Try Web Share API (native on iOS/Android)
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], fileName, { type: 'text/csv' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: 'FIRE シミュレーション結果',
+          text: '年齢別収支推移表',
+        }).catch(err => {
+          if (err.name !== 'AbortError') {
+            console.error('Share failed:', err);
+            triggerDownload(blob, fileName);
+          }
+        });
+        return;
+      }
+    }
+
+    // Fallback to traditional download
+    triggerDownload(blob, fileName);
+  }
+
+  function triggerDownload(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute('download', fileName);
+
+    // For iOS Safari, the link sometimes needs to be in the DOM and visible (but hidden)
+    link.style.position = 'fixed';
+    link.style.left = '0';
+    link.style.top = '0';
+    link.style.opacity = '0';
+    link.style.pointerEvents = 'none';
+
+    document.body.appendChild(link);
+
+    // Standard click
+    link.click();
+
+    // Fallback for some browsers: dispatch a manual click event
+    const clickEvent = new MouseEvent('click', {
+      view: window,
+      bubbles: true,
+      cancelable: true
+    });
+    link.dispatchEvent(clickEvent);
+
+    // Delay cleanup to ensure browser has started the download
+    setTimeout(() => {
+      if (link.parentNode) {
+        document.body.removeChild(link);
+      }
+      URL.revokeObjectURL(url);
+    }, 15000);
+  }
+
   return {
     formatYen,
     CopyButton,
@@ -421,6 +487,7 @@ export function useFireSimulatorViewModel() {
     algorithmExplanationSegments,
     copyConditionsAndAlgorithm,
     copyAnnualTable,
+    downloadAnnualTableCsv,
     mortgageOptions: computed(() => createMortgageOptions()),
     // New exports
     householdType,

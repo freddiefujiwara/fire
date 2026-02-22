@@ -74,3 +74,35 @@ export function buildAnnualTableJson(annualSimulationData) {
     riskAssetsYen: row.riskAssets,
   }));
 }
+
+export function generateCsv(data) {
+  const headers = [
+    "年齢",
+    "収入 (年金込)",
+    "支出",
+    "運用益(当年分)",
+    "取り崩し額",
+    "金融資産(合計)",
+    "貯金額",
+    "リスク資産額"
+  ];
+
+  const rows = data.map(row => [
+    `${row.age}歳`,
+    row.income + row.pension,
+    row.expenses,
+    row.investmentGain,
+    row.withdrawal,
+    row.assets,
+    row.cashAssets,
+    row.riskAssets
+  ]);
+
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(r => r.join(","))
+  ].join("\n");
+
+  // Add BOM for Excel compatibility
+  return "\uFEFF" + csvContent;
+}
