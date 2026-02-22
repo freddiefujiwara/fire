@@ -224,6 +224,32 @@ describe("fire domain", () => {
       vi.useRealTimers();
     });
 
+
+    it("applies staged default reduction for 3 children after each independence", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-05-14T09:00:00+09:00"));
+
+      const result = performFireSimulation({
+        initialAssets: 100000000,
+        riskAssets: 0,
+        monthlyExpense: 200000,
+        currentAge: 45,
+        includeInflation: false,
+        includePension: false,
+        retirementLumpSumAtFire: 0,
+        withdrawalRate: 0,
+        maxMonths: 220,
+        householdType: "family",
+        dependentBirthDates: ["2013-02-20", "2015-05-10", "2018-10-01"],
+        independenceAge: 24,
+      }, { recordMonthly: true, forceFireMonth: 0 });
+
+      expect(result.monthlyData[142].expenses).toBe(200000);
+      expect(result.monthlyData[143].expenses).toBe(180000);
+      expect(result.monthlyData[170].expenses).toBe(160000);
+      expect(result.monthlyData[211].expenses).toBe(130000);
+      vi.useRealTimers();
+    });
     it("handles extreme negative flow with current assets", () => {
        const result = generateGrowthTable({
          ...params,

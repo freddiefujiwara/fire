@@ -35,7 +35,7 @@ export function useFireSimulatorViewModel() {
   const householdType = ref("family"); // single, couple, family
   const userBirthDate = ref(DEFAULT_USER_BIRTH_DATE);
   const spouseBirthDate = ref(DEFAULT_SPOUSE_BIRTH_DATE);
-  const dependentBirthDate = ref(DEFAULT_DEPENDENT_BIRTH_DATE);
+  const dependentBirthDates = ref([DEFAULT_DEPENDENT_BIRTH_DATE]);
   const independenceAge = ref(24);
 
   const pensionConfig = ref({ ...DEFAULT_PENSION_CONFIG });
@@ -77,7 +77,7 @@ export function useFireSimulatorViewModel() {
     ht: householdType,
     ubd: userBirthDate,
     sbd: spouseBirthDate,
-    dbd: dependentBirthDate,
+    dbds: dependentBirthDates,
     ia: independenceAge,
     pc: pensionConfig,
     mira: manualInitialRiskAssets,
@@ -111,18 +111,35 @@ export function useFireSimulatorViewModel() {
       if (decoded) {
         Object.entries(stateToSync).forEach(([key, refVar]) => {
           if (decoded[key] !== undefined) {
-            if (key === 'pc') {
-                refVar.value = { ...refVar.value, ...decoded[key] };
+            if (key === "pc") {
+              refVar.value = { ...refVar.value, ...decoded[key] };
             } else {
-                refVar.value = decoded[key];
+              refVar.value = decoded[key];
             }
           }
         });
+        if ((!decoded.dbds || decoded.dbds.length === 0) && decoded.dbd) {
+          dependentBirthDates.value = [decoded.dbd];
+        }
       }
     }
   };
 
   loadFromUrl();
+  if (!Array.isArray(dependentBirthDates.value)) {
+    dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
+  }
+  dependentBirthDates.value = dependentBirthDates.value.filter(Boolean).slice(0, 3);
+
+  const addDependentBirthDate = () => {
+    if (dependentBirthDates.value.length >= 3) return;
+    dependentBirthDates.value.push(DEFAULT_DEPENDENT_BIRTH_DATE);
+  };
+
+  const removeDependentBirthDate = (index) => {
+    if (dependentBirthDates.value.length <= 1) return;
+    dependentBirthDates.value.splice(index, 1);
+  };
 
   watch(
     () => {
@@ -172,7 +189,8 @@ export function useFireSimulatorViewModel() {
     monthlyInvestment: monthlyInvestment.value,
     expenseBreakdown: null,
     pensionConfig: pensionConfig.value,
-    dependentBirthDate: householdType.value === "family" ? dependentBirthDate.value : null,
+    dependentBirthDate: householdType.value === "family" ? (dependentBirthDates.value[0] || null) : null,
+    dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],
     independenceAge: independenceAge.value,
     householdType: householdType.value,
   }));
@@ -198,10 +216,20 @@ export function useFireSimulatorViewModel() {
     return calculateAge(userBirthDate.value, payoff);
   });
 
-  const daughterIndependenceAge = computed(() => {
-      if (householdType.value !== "family" || !dependentBirthDate.value) return null;
-      const birth = new Date(dependentBirthDate.value);
-      return calculateAge(userBirthDate.value, new Date(birth.getFullYear() + independenceAge.value, 3, 1));
+  const dependentIndependenceAges = computed(() => {
+    if (householdType.value !== "family") return [];
+    return dependentBirthDates.value
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((birthDate, index) => {
+        const birth = new Date(birthDate);
+        if (Number.isNaN(birth.getTime())) return null;
+        return {
+          age: calculateAge(userBirthDate.value, new Date(birth.getFullYear() + independenceAge.value, 3, 1)),
+          label: `子${index + 1}の独立`,
+        };
+      })
+      .filter(Boolean);
   });
 
   const chartAnnotations = computed(() => {
@@ -213,9 +241,7 @@ export function useFireSimulatorViewModel() {
     if (pensionConfig.value.includeSpouse && (householdType.value === "couple" || householdType.value === "family")) {
         list.push({ age: pensionConfig.value.spouseUserAgeStart, label: "年金開始(配偶者)" });
     }
-    if (daughterIndependenceAge.value) {
-      list.push({ age: daughterIndependenceAge.value, label: "子の独立" });
-    }
+    dependentIndependenceAges.value.forEach((item) => list.push(item));
     if (mortgagePayoffAge.value) {
       list.push({ age: mortgagePayoffAge.value, label: "ローン完済" });
     }
@@ -235,7 +261,8 @@ export function useFireSimulatorViewModel() {
       monteCarloTrials: monteCarloTrials.value,
       monteCarloVolatilityPct: monteCarloVolatility.value,
       userBirthDate: userBirthDate.value,
-      dependentBirthDate: (householdType.value === "family") ? dependentBirthDate.value : null,
+      dependentBirthDate: householdType.value === "family" ? (dependentBirthDates.value[0] || null) : null,
+      dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],
       independenceAge: independenceAge.value,
     }),
   );
@@ -292,7 +319,8 @@ export function useFireSimulatorViewModel() {
     postFireFirstYearExtraExpenseYen: postFireFirstYearExtraExpense.value,
     retirementLumpSumAtFireYen: retirementLumpSumAtFire.value,
     userBirthDate: userBirthDate.value,
-    dependentBirthDate: dependentBirthDate.value,
+    dependentBirthDate: dependentBirthDates.value[0] || null,
+    dependentBirthDates: dependentBirthDates.value.filter(Boolean).slice(0, 3),
     pensionConfig: pensionConfig.value,
   }));
 
@@ -371,10 +399,12 @@ export function useFireSimulatorViewModel() {
     householdType,
     userBirthDate,
     spouseBirthDate,
-    dependentBirthDate,
+    dependentBirthDates,
     independenceAge,
     pensionConfig,
     manualInitialRiskAssets,
     manualInitialCashAssets,
+    addDependentBirthDate,
+    removeDependentBirthDate,
   };
 }

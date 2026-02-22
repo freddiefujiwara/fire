@@ -21,7 +21,9 @@ export function generateAlgorithmExplanationSegments(params) {
     monteCarloTrials,
     monteCarloVolatilityPct,
     dependentBirthDate,
+    dependentBirthDates,
     independenceAge,
+    householdType,
   } = params;
 
   const segments = [
@@ -42,14 +44,24 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "text", value: "）\n・算定根拠:\n  - 入力された年金実績データに基づき、現在までの加入実績を反映。\n  - リタイアに伴う厚生年金加入期間の停止を考慮。\n  - 繰上げ受給等の減額率設定を反映。\n\n住宅ローンの完済月以降は、月間支出からローン返済額を自動的に差し引いてシミュレーションを継続します。\n" }
   );
 
-  if (dependentBirthDate) {
+  const familyDependentCount = householdType === "family"
+    ? (Array.isArray(dependentBirthDates) && dependentBirthDates.length > 0 ? dependentBirthDates.length : (dependentBirthDate ? 1 : 0))
+    : 0;
+
+  if (familyDependentCount > 0) {
+    const defaultReductionText = familyDependentCount === 1
+      ? "0.8（約2割減）"
+      : familyDependentCount === 2
+        ? "1人目: 0.85 / 2人目: 0.70（最終的に約3割減）"
+        : "1人目: 0.90 / 2人目: 0.80 / 3人目: 0.65（最終的に約3.5割減）";
+
     segments.push(
       { type: "text", value: `
 ■ 家族構成の変化（子の独立）について
 子が独立する（${independenceAge}歳になる年度）以降は、非住宅ローン部分の生活費に減額係数を適用します。
 ・減額係数の決まり方:
   - 支出内訳がある場合: 食費・教養教育・通信費・衣服美容・日用品の減額ルールから、全体の加重係数を算出して適用
-  - 支出内訳がない場合（family設定）: 既定値として 0.8（約2割減）を適用
+  - 支出内訳がない場合（family設定）: 既定値として ${defaultReductionText} を適用
 ・住宅ローン返済額は別建てで扱い、完済月までは固定額、完済後は0円として計算します。
 ` }
     );
@@ -92,6 +104,8 @@ function calculateRequiredAssets({
   mortgagePayoffDate,
   lifestyleReductionFactor,
   independenceMonthKey,
+  independenceMonthKeys,
+  householdChildrenCount,
   postFireExtraExpense,
   postFireFirstYearExtraExpense,
   m,
@@ -117,6 +131,8 @@ function calculateRequiredAssets({
       mortgagePayoffDate,
       lifestyleReductionFactor,
       independenceMonthKey,
+      independenceMonthKeys,
+      householdChildrenCount,
     });
     const extraWithInf = (postFireExtraExpense || 0) * Math.pow(1 + g, m + i);
     let spike = 0;
@@ -148,6 +164,8 @@ function calculateCurrentMonthlyExpense({
   mortgagePayoffDate,
   lifestyleReductionFactor = 1.0,
   independenceMonthKey,
+  independenceMonthKeys = [],
+  householdChildrenCount = 0,
 }) {
   const mortgage = mortgageMonthlyPayment || 0;
   const nonMortgageExpense = Math.max(0, baseMonthlyExpense - mortgage);
@@ -156,8 +174,19 @@ function calculateCurrentMonthlyExpense({
   currentDate.setMonth(currentDate.getMonth() + monthIndex);
   const currentMonthKey = toMonthKey(currentDate);
 
-  const isIndependent = independenceMonthKey && currentMonthKey >= independenceMonthKey;
-  const effectiveReduction = isIndependent ? lifestyleReductionFactor : 1.0;
+  const keyList = independenceMonthKeys.length > 0 ? independenceMonthKeys : (independenceMonthKey ? [independenceMonthKey] : []);
+  const independentChildrenCount = keyList.filter((key) => currentMonthKey >= key).length;
+
+  let effectiveReduction = 1.0;
+  if (householdChildrenCount <= 1) {
+    effectiveReduction = independentChildrenCount > 0 ? lifestyleReductionFactor : 1.0;
+  } else if (householdChildrenCount === 2) {
+    const factors = [1.0, 0.85, 0.70];
+    effectiveReduction = factors[Math.min(independentChildrenCount, 2)];
+  } else {
+    const factors = [1.0, 0.90, 0.80, 0.65];
+    effectiveReduction = factors[Math.min(independentChildrenCount, 3)];
+  }
 
   const inflatedNonMortgage = (nonMortgageExpense * effectiveReduction) * Math.pow(1 + monthlyInflationRate, monthIndex);
 
@@ -198,12 +227,17 @@ export function calculateLifestyleReduction(breakdown) {
   return reducedTotal / originalTotal;
 }
 
-function getIndependenceMonthKey(dependentBirthDate, independenceAge = 24) {
-  if (!dependentBirthDate) return null;
-  const birthDate = new Date(dependentBirthDate);
-  if (isNaN(birthDate.getTime())) return null;
-  const independenceDate = new Date(birthDate.getFullYear() + independenceAge, 3, 1);
-  return toMonthKey(independenceDate);
+function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24) {
+  if (!Array.isArray(dependentBirthDates)) return [];
+  return dependentBirthDates
+    .map((birthDateValue) => {
+      const birthDate = new Date(birthDateValue);
+      if (isNaN(birthDate.getTime())) return null;
+      const independenceDate = new Date(birthDate.getFullYear() + independenceAge, 3, 1);
+      return toMonthKey(independenceDate);
+    })
+    .filter(Boolean)
+    .sort();
 }
 
 export function normalizeFireParams(params) {
@@ -232,6 +266,9 @@ export function normalizeFireParams(params) {
     expenseBreakdown: params.expenseBreakdown || null,
     pensionConfig: params.pensionConfig || DEFAULT_PENSION_CONFIG,
     dependentBirthDate: params.dependentBirthDate || null,
+    dependentBirthDates: Array.isArray(params.dependentBirthDates)
+      ? params.dependentBirthDates.filter(Boolean).slice(0, 3)
+      : (params.dependentBirthDate ? [params.dependentBirthDate] : []),
     independenceAge: params.independenceAge || 24,
     householdType: params.householdType || "single",
   };
@@ -260,6 +297,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     monthlyInvestment,
     pensionConfig,
     dependentBirthDate,
+    dependentBirthDates,
     independenceAge,
     householdType,
   } = params;
@@ -269,7 +307,12 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   const monthlyInflationRate = Math.pow(1 + (includeInflation ? inflationRate : 0), 1 / 12) - 1;
   const totalMonthsUntil100 = (100 - currentAge) * 12;
   const simulationStartDate = new Date();
-  const independenceMonthKey = getIndependenceMonthKey(dependentBirthDate, independenceAge);
+  const fallbackDependentBirthDates = dependentBirthDate ? [dependentBirthDate] : [];
+  const effectiveDependentBirthDates = (dependentBirthDates && dependentBirthDates.length > 0)
+    ? dependentBirthDates
+    : fallbackDependentBirthDates;
+  const independenceMonthKeys = getIndependenceMonthKeys(effectiveDependentBirthDates, independenceAge);
+  const householdChildrenCount = householdType === "family" ? effectiveDependentBirthDates.length : 0;
 
   let currentRisk = riskAssets;
   let currentCostBasis = riskAssets;
@@ -299,7 +342,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       mortgageMonthlyPayment,
       mortgagePayoffDate,
       lifestyleReductionFactor,
-      independenceMonthKey,
+      independenceMonthKeys,
+      householdChildrenCount,
     });
     const extraWithInf = postFireExtraExpense * Math.pow(1 + monthlyInflationRate, m);
 
@@ -334,7 +378,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         mortgageMonthlyPayment,
         mortgagePayoffDate,
         lifestyleReductionFactor,
-        independenceMonthKey,
+        independenceMonthKeys,
+        householdChildrenCount,
         postFireExtraExpense,
         postFireFirstYearExtraExpense,
         m,

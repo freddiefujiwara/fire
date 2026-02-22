@@ -77,6 +77,27 @@ describe("useFireSimulatorViewModel", () => {
     expect(callArgs.params.p).toBeDefined();
   });
 
+
+  it("supports multiple dependent birth dates and legacy dbd URL", async () => {
+    const { encode } = await import("@/domain/fire/url");
+    const encoded = encode({ dbd: "2018-01-01" });
+
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: { p: encoded },
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    expect(vm.dependentBirthDates.value).toEqual(["2018-01-01"]);
+
+    vm.addDependentBirthDate();
+    vm.addDependentBirthDate();
+    vm.addDependentBirthDate();
+    expect(vm.dependentBirthDates.value).toHaveLength(3);
+
+    vm.removeDependentBirthDate(0);
+    expect(vm.dependentBirthDates.value).toHaveLength(2);
+  });
   it("runs monte carlo only when enabled and clears results when disabled", async () => {
     const vm = useFireSimulatorViewModel();
     vm.runMonteCarlo();
