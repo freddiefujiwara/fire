@@ -12,7 +12,7 @@ import {
   generateGrowthTable,
   generateAnnualSimulation,
   calculateMonthlyPension,
-  runMonteCarloSimulation,
+  runMonteCarloSimulationAsync,
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
 } from "@/domain/fire";
@@ -273,20 +273,22 @@ export function useFireSimulatorViewModel() {
   const monteCarloResults = ref(null);
   const isCalculatingMonteCarlo = ref(false);
 
-  const runMonteCarlo = () => {
+  const runMonteCarlo = async () => {
     if (!useMonteCarlo.value) {
       monteCarloResults.value = null;
       return;
     }
     isCalculatingMonteCarlo.value = true;
-    setTimeout(() => {
-      monteCarloResults.value = runMonteCarloSimulation(simulationParams.value, {
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      monteCarloResults.value = await runMonteCarloSimulationAsync(simulationParams.value, {
         trials: monteCarloTrials.value,
         annualVolatility: monteCarloVolatility.value / 100,
         seed: monteCarloSeed.value,
       });
+    } finally {
       isCalculatingMonteCarlo.value = false;
-    }, 10);
+    }
   };
 
   watch(useMonteCarlo, (val) => {

@@ -68,6 +68,7 @@ const {
   <section>
     <div class="filter-section table-wrap">
       <h3 class="section-title">基本設定 (家族・資産)</h3>
+      <fieldset class="form-lock" :disabled="isCalculatingMonteCarlo">
       <div class="fire-form-grid">
         <div class="filter-item">
           <label>世帯構成</label>
@@ -257,6 +258,7 @@ const {
           disabled-on-privacy
         />
       </div>
+      </fieldset>
 
       <div class="initial-summary">
         <details>
@@ -411,6 +413,17 @@ const {
 </template>
 
 <style scoped>
+.form-lock {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.form-lock:disabled {
+  opacity: 0.65;
+}
+
 .fire-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

@@ -8,4 +8,5 @@ export {
   generateGrowthTable,
   generateAnnualSimulation,
   runMonteCarloSimulation,
+  runMonteCarloSimulationAsync,
 } from "./fire/engine";

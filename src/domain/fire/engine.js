@@ -689,3 +689,101 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
     fireReachedMonth: fireMonth
   };
 }
+
+export async function runMonteCarloSimulationAsync(
+  inputParams,
+  { trials = 1000, annualVolatility = 0.15, seed = 123, chunkSize = 50 } = {},
+) {
+  const params = normalizeFireParams(inputParams);
+  const detResult = performFireSimulation(params);
+  const fireMonth = detResult.fireReachedMonth;
+  const safeTrials = Math.max(1, Math.floor(Number(trials) || 0));
+  const safeAnnualVolatility = Math.max(0, Number.isFinite(annualVolatility) ? annualVolatility : 0);
+  const safeChunkSize = Math.max(1, Math.floor(Number(chunkSize) || 1));
+  const rand = createRandom(seed);
+
+  const { currentAge, annualReturnRate } = params;
+  const totalMonths = (100 - currentAge) * 12;
+
+  const mu = annualReturnRate;
+  const sigma = safeAnnualVolatility;
+  const alpha = Math.log(1 + mu) - 0.5 * Math.log(1 + Math.pow(sigma / (1 + mu), 2));
+  const betaSq = Math.log(1 + Math.pow(sigma / (1 + mu), 2));
+
+  const alphaM = alpha / 12;
+  const betaM = Math.sqrt(betaSq / 12);
+
+  const finalAssetsList = [];
+  const annualHistory = [];
+  let successCount = 0;
+  const totalYears = Math.ceil(totalMonths / 12);
+
+  for (let t = 0; t < safeTrials; t++) {
+    const returnsArray = [];
+    for (let m = 0; m <= totalMonths; m++) {
+      const logReturn = alphaM + betaM * nextGaussian(rand);
+      returnsArray.push(Math.exp(logReturn) - 1);
+    }
+
+    const res = _runCoreSimulation(params, {
+      fireMonth,
+      returnsArray,
+      recordMonthly: true,
+    });
+
+    finalAssetsList.push(res.finalAssets);
+    if (res.survived) successCount++;
+
+    const yearAssets = [];
+    for (let y = 0; y <= totalYears; y++) {
+      const mIdx = y * 12;
+      if (mIdx < res.monthlyData.length) {
+        yearAssets.push(res.monthlyData[mIdx].assets);
+      } else {
+        yearAssets.push(res.monthlyData[res.monthlyData.length - 1].assets);
+      }
+    }
+    annualHistory.push(yearAssets);
+
+    if ((t + 1) % safeChunkSize === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  finalAssetsList.sort((a, b) => a - b);
+
+  const interpolatePercentile = (sortedValues, p) => {
+    if (sortedValues.length === 1) return sortedValues[0];
+    const pos = (p / 100) * (sortedValues.length - 1);
+    const lowerIndex = Math.floor(pos);
+    const upperIndex = Math.ceil(pos);
+    if (lowerIndex === upperIndex) return sortedValues[lowerIndex];
+    const weight = pos - lowerIndex;
+    return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * weight;
+  };
+
+  const getPercentile = (p) => interpolatePercentile(finalAssetsList, p);
+
+  const p10Path = [];
+  const p50Path = [];
+  const p90Path = [];
+
+  for (let y = 0; y <= totalYears; y++) {
+    const assetsAtY = annualHistory.map((h) => h[y]).sort((a, b) => a - b);
+    p10Path.push(interpolatePercentile(assetsAtY, 10));
+    p50Path.push(interpolatePercentile(assetsAtY, 50));
+    p90Path.push(interpolatePercentile(assetsAtY, 90));
+  }
+
+  return {
+    successRate: successCount / safeTrials,
+    p10: getPercentile(10),
+    p50: getPercentile(50),
+    p90: getPercentile(90),
+    p10Path,
+    p50Path,
+    p90Path,
+    trials: safeTrials,
+    fireReachedMonth: fireMonth,
+  };
+}

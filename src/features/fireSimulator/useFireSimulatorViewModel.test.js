@@ -8,7 +8,7 @@ vi.mock("@/domain/fire", async (importOriginal) => {
     ...actual,
     generateGrowthTable: () => ({ fireReachedMonth: 12, table: [{ month: 12, assets: 777 }] }),
     generateAnnualSimulation: () => [{ age: 40, income: 10, pension: 2, expenses: 3, investmentGain: 4, withdrawal: 5, assets: 6, cashAssets: 7, riskAssets: 8 }],
-    runMonteCarloSimulation: () => ({ successRate: 0.5, p10: 1, p50: 2, p90: 3, trials: 100 }),
+    runMonteCarloSimulationAsync: async () => ({ successRate: 0.5, p10: 1, p50: 2, p90: 3, trials: 100 }),
     generateAlgorithmExplanationSegments: () => [{ value: "abc" }],
   };
 });
@@ -100,16 +100,19 @@ describe("useFireSimulatorViewModel", () => {
   });
   it("runs monte carlo only when enabled and clears results when disabled", async () => {
     const vm = useFireSimulatorViewModel();
-    vm.runMonteCarlo();
+    await vm.runMonteCarlo();
     expect(vm.monteCarloResults.value).toBeNull();
 
     vm.useMonteCarlo.value = true;
-    vm.runMonteCarlo();
+    const running = vm.runMonteCarlo();
+    expect(vm.isCalculatingMonteCarlo.value).toBe(true);
     vi.runAllTimers();
+    await running;
     expect(vm.monteCarloResults.value.successRate).toBe(0.5);
+    expect(vm.isCalculatingMonteCarlo.value).toBe(false);
 
     vm.useMonteCarlo.value = false;
-    vm.runMonteCarlo();
+    await vm.runMonteCarlo();
     await nextTick();
     expect(vm.monteCarloResults.value).toBeNull();
   });
