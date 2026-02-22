@@ -1,9 +1,10 @@
-import { calculateMonthlyPension, DEFAULT_PENSION_CONFIG } from "./pension";
+import { calculateMonthlyPension, DEFAULT_PENSION_CONFIG, calculateStartAgeAdjustmentRate } from "./pension";
 import { formatYen } from "../format";
 
 export {
   calculateMonthlyPension,
   DEFAULT_PENSION_CONFIG,
+  calculateStartAgeAdjustmentRate,
 };
 
 /**
@@ -33,6 +34,12 @@ export function generateAlgorithmExplanationSegments(params) {
   const segments = [
     { type: "text", value: "本シミュレーションは、設定された期待リターン・インフレ率・年金・ローン等のキャッシュフローに基づき、100歳時点で資産が残る最短リタイア年齢を算出しています。\n・必要資産目安は「FIRE達成年齢で退職して100歳まで資産が尽きない最小条件」を満たす達成時点の金融資産額と同じ定義です。\n" },
   ];
+
+  const startAge = Number(pensionConfig?.userStartAge ?? 65);
+  const inferredAdjustmentRate = calculateStartAgeAdjustmentRate(startAge);
+  const appliedAdjustmentRate = pensionConfig?.earlyReduction ?? inferredAdjustmentRate;
+  const adjustmentMonths = Math.max(0, Math.round(Math.abs(65 - startAge) * 12));
+  const adjustmentType = startAge < 65 ? "繰上げ" : startAge > 65 ? "繰下げ" : "65歳開始";
 
   segments.push(
     { type: "text", value: "・投資優先順位ルール: 生活防衛資金として現金を維持するため、毎月の投資額は「前月までの貯金残高 + 当月の収支剰余金」を上限として自動調整されます（貯金がマイナスにならないよう制限されます）。\n・FIRE達成後は追加投資を停止し、定期収入（給与・ボーナス等）もゼロになると仮定しています。\n・FIRE達成月には退職金（一括）として " },
@@ -65,6 +72,22 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "text", value: `年) = ` },
     { type: "amount", value: formatYen(pensionProjectedAnnual) },
     { type: "text", value: ` として計算。
+  - 受給開始年齢による調整率:
+    - 65歳開始を基準(1.0)とし、繰上げは1か月ごとに0.4%減額、繰下げは1か月ごとに0.7%増額として計算。
+    - 本ケース: 受給開始年齢=` },
+    { type: "text", value: String(startAge) },
+    { type: "text", value: `歳（` },
+    { type: "text", value: adjustmentType },
+    { type: "text", value: `）、調整月数=` },
+    { type: "text", value: String(adjustmentMonths) },
+    { type: "text", value: `か月。
+    - 自動算出調整率 = ` },
+    { type: "text", value: String(inferredAdjustmentRate.toFixed(3)) },
+    { type: "text", value: `。
+    - 適用調整率 = ` },
+    { type: "text", value: String(appliedAdjustmentRate.toFixed(3)) },
+    { type: "text", value: `（URL等で明示指定があればその値、未指定なら上記の自動算出値）。
+    - ご本人の年金年額 = (基礎年金満額 × 基礎年金反映率 + 厚生年金受取年額) × 適用調整率。
   - リタイアに伴う厚生年金加入期間の停止を考慮。
   - 繰上げ受給等の減額率設定を反映。
 

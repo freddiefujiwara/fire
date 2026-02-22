@@ -42,6 +42,7 @@ describe("useFireSimulatorViewModel", () => {
   it("derives key values and export text", async () => {
     const vm = useFireSimulatorViewModel();
     expect(vm.initialAssets.value).toBe(25000000);
+    expect(vm.pensionAnnualAtFire.value).toBeGreaterThan(0);
 
     expect(vm.requiredAssetsAtFire.value).toBe(777);
     expect(vm.copyAnnualTable()).toContain("incomeWithPensionYen");
@@ -79,6 +80,20 @@ describe("useFireSimulatorViewModel", () => {
 
     const vm = useFireSimulatorViewModel();
     expect(vm.pensionConfig.value.basicReduction).toBe(1.0);
+  });
+
+
+  it("uses age-based earlyReduction when URL pensionConfig is present but earlyReduction is missing", async () => {
+    const { encode } = await import("@/domain/fire/url");
+    const encoded = encode({ pc: { userStartAge: 65 } });
+
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: { p: encoded },
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    expect(vm.pensionConfig.value.earlyReduction).toBe(1.0);
   });
 
   it("updates URL when state changes", async () => {

@@ -3,12 +3,28 @@ export const DEFAULT_PENSION_CONFIG = {
   spouseUserAgeStart: 65,
   basicFullAnnualYen: 780000,
   basicReduction: 0.9,
-  earlyReduction: 0.76,
+  earlyReduction: undefined,
   pensionDataAge: 44,
   userKoseiAccruedAtDataAgeAnnualYen: 1000000,
   userKoseiFutureFactorAnnualYenPerYear: 42000,
   includeSpouse: true,
 };
+
+export function calculateStartAgeAdjustmentRate(userStartAge) {
+  const normalizedStartAge = Number(userStartAge);
+  if (!Number.isFinite(normalizedStartAge)) return 1.0;
+
+  if (normalizedStartAge === 65) return 1.0;
+
+  if (normalizedStartAge < 65) {
+    const monthsEarly = Math.max(0, Math.round((65 - normalizedStartAge) * 12));
+    return Math.max(0, 1.0 - monthsEarly * 0.004);
+  }
+
+  const cappedStartAge = Math.min(normalizedStartAge, 75);
+  const monthsDelayed = Math.max(0, Math.round((cappedStartAge - 65) * 12));
+  return 1.0 + monthsDelayed * 0.007;
+}
 
 /**
  * Calculate monthly pension amount for one user age.
@@ -28,13 +44,15 @@ export function calculateMonthlyPension(age, fireAge, config = DEFAULT_PENSION_C
     includeSpouse,
   } = config;
 
+  const startAgeAdjustmentRate = earlyReduction ?? calculateStartAgeAdjustmentRate(userStartAge);
+
   if (age >= userStartAge) {
-    const basicPart = basicFullAnnualYen * basicReduction * earlyReduction;
+    const basicPart = basicFullAnnualYen * basicReduction * startAgeAdjustmentRate;
     const participationEndAge = Math.min(60, fireAge);
     const futureYears = Math.max(0, participationEndAge - pensionDataAge);
     const employeesPartAt65 = userKoseiAccruedAtDataAgeAnnualYen + futureYears * userKoseiFutureFactorAnnualYenPerYear;
 
-    totalAnnual += basicPart + employeesPartAt65 * earlyReduction;
+    totalAnnual += basicPart + employeesPartAt65 * startAgeAdjustmentRate;
   }
 
   if (includeSpouse && age >= spouseUserAgeStart) {

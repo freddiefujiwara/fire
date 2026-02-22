@@ -15,6 +15,7 @@ import {
   runMonteCarloSimulation,
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
+  calculateStartAgeAdjustmentRate,
 } from "@/domain/fire";
 import { encode, decode } from "@/domain/fire/url";
 import FireSimulationTable from "@/components/FireSimulationTable.vue";
@@ -120,6 +121,7 @@ export function useFireSimulatorViewModel() {
 
   let pensionDataAgeLoadedFromUrl = false;
   let basicReductionLoadedFromUrl = false;
+  let earlyReductionLoadedFromUrl = false;
   const loadFromUrl = () => {
     const p = route.params.p;
     if (p) {
@@ -131,6 +133,7 @@ export function useFireSimulatorViewModel() {
               refVar.value = { ...refVar.value, ...decoded[key] };
               pensionDataAgeLoadedFromUrl = decoded[key]?.pensionDataAge !== undefined;
               basicReductionLoadedFromUrl = decoded[key]?.basicReduction !== undefined;
+              earlyReductionLoadedFromUrl = decoded[key]?.earlyReduction !== undefined;
             } else {
               refVar.value = decoded[key];
             }
@@ -149,6 +152,9 @@ export function useFireSimulatorViewModel() {
   }
   if (!basicReductionLoadedFromUrl && route.params.p) {
     pensionConfig.value.basicReduction = 1.0;
+  }
+  if (!earlyReductionLoadedFromUrl && route.params.p) {
+    pensionConfig.value.earlyReduction = calculateStartAgeAdjustmentRate(pensionConfig.value.userStartAge);
   }
   if (!Array.isArray(dependentBirthDates.value)) {
     dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
@@ -237,7 +243,14 @@ export function useFireSimulatorViewModel() {
 
   const fireAchievementMonth = computed(() => growthData.value.fireReachedMonth);
   const fireAchievementAge = computed(() => Math.floor(currentAge.value + fireAchievementMonth.value / 12));
-  const pensionAnnualAtFire = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value) * 12);
+  const pensionEstimateAge = computed(() => {
+    const userStart = pensionConfig.value.userStartAge;
+    if (!pensionConfig.value.includeSpouse || householdType.value === "single") {
+      return userStart;
+    }
+    return Math.max(userStart, pensionConfig.value.spouseUserAgeStart);
+  });
+  const pensionAnnualAtFire = computed(() => calculateMonthlyPension(pensionEstimateAge.value, fireAchievementAge.value, pensionConfig.value) * 12);
   const estimatedMonthlyPensionAt60 = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value));
   const pensionParticipationEndAge = computed(() => Math.min(60, fireAchievementAge.value));
   const pensionFutureYears = computed(() => pensionParticipationEndAge.value - pensionConfig.value.pensionDataAge);
