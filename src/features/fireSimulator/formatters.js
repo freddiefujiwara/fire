@@ -60,7 +60,7 @@ export function buildConditionsAndAlgorithmJson({
     postFireFirstYearExtraExpenseYen,
     retirementLumpSumAtFireYen,
     userBirthDate,
-    dependentBirthDate,
+    spouseBirthDate,
     dependentBirthDates,
     requiredAssetsAtFireYen,
     fireAchievementMonth,
@@ -94,7 +94,7 @@ export function buildConditionsAndAlgorithmJson({
       householdProfile: {
         householdType,
         userBirthDate,
-        dependentBirthDate,
+        spouseBirthDate,
         dependentBirthDates,
       },
       portfolioAndCashflow: {

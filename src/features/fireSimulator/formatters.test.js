@@ -56,7 +56,7 @@ describe("fireSimulator formatters", () => {
         postFireFirstYearExtraExpenseYen: 10,
         retirementLumpSumAtFireYen: 0,
         userBirthDate: "1990-01-01",
-        dependentBirthDate: null,
+        spouseBirthDate: "1992-02-02",
         dependentBirthDates: [],
         requiredAssetsAtFireYen: 3000,
         fireAchievementMonth: 100,
@@ -78,6 +78,7 @@ describe("fireSimulator formatters", () => {
     });
 
     expect(result.simulationInputs.portfolioAndCashflow.mortgageMonthlyPaymentYen).toBe(10);
+    expect(result.simulationInputs.householdProfile.spouseBirthDate).toBe("1992-02-02");
     expect(result.keyResults.fireTarget.fireAchievementAge).toBe(45);
     expect(result.monteCarloSimulation.terminalAssetsPercentilesYen.p50Yen).toBe(2);
     expect(result.keyResults.pensionEstimates.householdAnnualAtPensionEstimateAgeYen).toBe(1200);
