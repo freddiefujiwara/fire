@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import FireSimulationTable from "./FireSimulationTable.vue";
+import { useUiStore } from "@/stores/ui";
 
 describe("FireSimulationTable.vue", () => {
   setActivePinia(createPinia());
@@ -65,5 +66,25 @@ describe("FireSimulationTable.vue", () => {
 
     // Second row: withdrawal 1000000
     expect(rows[1].findAll("td")[4].classes()).toContain("is-negative");
+  });
+
+  it("updates CSV button title based on privacy mode", async () => {
+    const pinia = createPinia();
+    const wrapper = mount(FireSimulationTable, {
+      props: { data: sampleData },
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    const uiStore = useUiStore();
+    const button = wrapper.find(".download-btn");
+
+    expect(button.attributes("title")).toBe("CSVダウンロード / 共有");
+
+    uiStore.privacyMode = true;
+    await wrapper.vm.$nextTick();
+
+    expect(button.attributes("title")).toBe("CSVをダウンロードするにはモザイクを解除してください");
   });
 });

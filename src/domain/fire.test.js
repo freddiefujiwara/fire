@@ -118,6 +118,64 @@ describe("fire domain", () => {
       const text = segments.map((seg) => seg.value).join("");
       expect(text).toContain("1人目: 0.90 / 2人目: 0.80 / 3人目: 0.65");
     });
+
+    it("shows early-claim pension adjustment when start age is below 65", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "single",
+        pensionParticipationEndAge: 45,
+        pensionFutureYears: 0,
+        pensionProjectedAnnual: 1200000,
+        pensionConfig: {
+          userStartAge: 62,
+          pensionDataAge: 45,
+          userKoseiAccruedAtDataAgeAnnualYen: 600000,
+          userKoseiFutureFactorAnnualYenPerYear: 0,
+        },
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).toContain("受給開始年齢=62歳（繰上げ）");
+      expect(text).toContain("適用調整率 = 0.856");
+    });
+
+    it("uses explicit pension adjustment override when provided", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "single",
+        pensionParticipationEndAge: 45,
+        pensionFutureYears: 0,
+        pensionProjectedAnnual: 1200000,
+        pensionConfig: {
+          userStartAge: 68,
+          earlyReduction: 1.111,
+          pensionDataAge: 45,
+          userKoseiAccruedAtDataAgeAnnualYen: 600000,
+          userKoseiFutureFactorAnnualYenPerYear: 0,
+        },
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).toContain("受給開始年齢=68歳（繰下げ）");
+      expect(text).toContain("自動算出調整率 = 1.252");
+      expect(text).toContain("適用調整率 = 1.111");
+    });
   });
 
   it("keeps expected exported functions on the fire barrel", () => {
