@@ -380,7 +380,7 @@ export function useFireSimulatorViewModel() {
     postFireFirstYearExtraExpenseYen: postFireFirstYearExtraExpense.value,
     retirementLumpSumAtFireYen: retirementLumpSumAtFire.value,
     userBirthDate: userBirthDate.value,
-    dependentBirthDate: dependentBirthDates.value[0] || null,
+    spouseBirthDate: householdType.value === "single" ? null : spouseBirthDate.value,
     dependentBirthDates: dependentBirthDates.value.filter(Boolean).slice(0, 3),
     pensionConfig: pensionConfig.value,
   }));
@@ -394,6 +394,7 @@ export function useFireSimulatorViewModel() {
         monteCarloSeed: monteCarloSeed.value,
         estimatedMonthlyPensionAt60: estimatedMonthlyPensionAt60.value,
         pensionAnnualAtFire: pensionAnnualAtFire.value,
+        pensionEstimateAge: pensionEstimateAge.value,
         fireAchievementAge: fireAchievementAge.value,
         algorithmExplanation: algorithmExplanationFull.value,
       }),
