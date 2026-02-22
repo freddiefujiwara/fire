@@ -67,6 +67,20 @@ describe("useFireSimulatorViewModel", () => {
     expect(vm.monthlyInvestment.value).toBe(555555);
   });
 
+
+  it("uses basicReduction=1.0 when URL pensionConfig is present but basicReduction is missing", async () => {
+    const { encode } = await import("@/domain/fire/url");
+    const encoded = encode({ pc: { earlyReduction: 0.76 } });
+
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: { p: encoded },
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    expect(vm.pensionConfig.value.basicReduction).toBe(1.0);
+  });
+
   it("updates URL when state changes", async () => {
     const replaceMock = vi.fn();
     vi.spyOn(vueRouter, "useRouter").mockReturnValue({

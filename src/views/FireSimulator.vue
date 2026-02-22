@@ -129,6 +129,10 @@ const {
             <label>今後の厚生年金増分 (年額/年)</label>
             <NumericInput v-model="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" :step="1000" />
           </div>
+          <div class="filter-item">
+            <label>データ基準年 (本人年齢)</label>
+            <NumericInput v-model="pensionConfig.pensionDataAge" />
+          </div>
           <div class="filter-item" v-if="householdType !== 'single'" style="flex-direction: row; align-items: center; gap: 8px;">
              <input type="checkbox" v-model="pensionConfig.includeSpouse" id="includeSpouse" />
              <label for="includeSpouse" style="margin: 0;">配偶者の基礎年金を合算</label>

@@ -24,6 +24,10 @@ export function generateAlgorithmExplanationSegments(params) {
     dependentBirthDates,
     independenceAge,
     householdType,
+    pensionConfig,
+    pensionParticipationEndAge,
+    pensionFutureYears,
+    pensionProjectedAnnual,
   } = params;
 
   const segments = [
@@ -41,7 +45,31 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "amount", value: formatYen(pensionAnnualAtFire) },
     { type: "text", value: "（月額 " },
     { type: "amount", value: formatYen(Math.round(pensionAnnualAtFire / 12)) },
-    { type: "text", value: "）\n・算定根拠:\n  - 入力された年金実績データに基づき、現在までの加入実績を反映。\n  - リタイアに伴う厚生年金加入期間の停止を考慮。\n  - 繰上げ受給等の減額率設定を反映。\n\n住宅ローンの完済月以降は、月間支出からローン返済額を自動的に差し引いてシミュレーションを継続します。\n" }
+    { type: "text", value: `）
+・算定根拠:
+  - 将来加算年数 (futureYears) = participationEndAge - pensionDataAge
+  - 厚生年金受取年額 = データ基準年時点の厚生年金加入実績額 + (今後の厚生年金増分 × 将来加算年数)
+  - 本ケースでは participationEndAge=` },
+    { type: "text", value: String(pensionParticipationEndAge) },
+    { type: "text", value: `歳, pensionDataAge=` },
+    { type: "text", value: String(pensionConfig?.pensionDataAge ?? "-") },
+    { type: "text", value: `歳 なので futureYears=` },
+    { type: "text", value: String(pensionFutureYears) },
+    { type: "text", value: `年。
+  - 受取年額 = ` },
+    { type: "amount", value: formatYen(pensionConfig?.userKoseiAccruedAtDataAgeAnnualYen || 0) },
+    { type: "text", value: ` + (` },
+    { type: "amount", value: formatYen(pensionConfig?.userKoseiFutureFactorAnnualYenPerYear || 0) },
+    { type: "text", value: ` × ` },
+    { type: "text", value: String(pensionFutureYears) },
+    { type: "text", value: `年) = ` },
+    { type: "amount", value: formatYen(pensionProjectedAnnual) },
+    { type: "text", value: ` として計算。
+  - リタイアに伴う厚生年金加入期間の停止を考慮。
+  - 繰上げ受給等の減額率設定を反映。
+
+住宅ローンの完済月以降は、月間支出からローン返済額を自動的に差し引いてシミュレーションを継続します。
+` }
   );
 
   /* c8 ignore next 3 */
