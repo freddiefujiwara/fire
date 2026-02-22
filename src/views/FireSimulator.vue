@@ -29,6 +29,7 @@ const {
   manualMonthlyExpense,
   manualRegularMonthlyIncome,
   manualAnnualBonus,
+  annualBonus,
   mortgageMonthlyPayment,
   mortgagePayoffDate,
   monthlyExpense,
