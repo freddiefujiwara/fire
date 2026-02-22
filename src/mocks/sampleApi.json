@@ -1,0 +1,58 @@
+{
+  "breakdown": [
+    { "category": "預金・現金", "amount_yen": "1,200,000", "percentage": "30" },
+    { "category": "株式（現物）", "amount_yen": "1,500,000", "percentage": "37.5%" },
+    { "category": "投資信託", "amount_yen": "1,100,000", "percentage": "27.5" },
+    { "category": "ポイント・マイル", "amount_yen": "200,000", "percentage": "5" }
+  ],
+  "breakdown-liability": [
+    { "category": "クレジットカード", "amount_yen": "120,000", "percentage": "24" },
+    { "category": "住宅ローン", "amount_yen": "380,000", "percentage": "76%" }
+  ],
+  "total-liability": [{ "total_yen": "500,000" }],
+
+  "details__portfolio_det_depo__t0": [
+    { "category": "預金・現金", "種類・名称": "普通預金", "残高": "800,000", "保有金融機関": "サンプル銀行A" },
+    { "category": "預金・現金", "種類・名称": "電子マネー", "残高": "400,000", "保有金融機関": "サンプルウォレット" }
+  ],
+  "details__portfolio_det_eq__t0": [
+    { "category": "株式（現物）", "銘柄コード": "1111", "銘柄名": "サンプル工業", "評価額": "700,000", "保有数": "100", "保有金融機関": "サンプル証券A" },
+    { "category": "株式（現物）", "銘柄コード": "ETF1", "銘柄名": "サンプルETF", "評価額": "800,000", "保有数": "10", "保有金融機関": "サンプル証券B" }
+  ],
+  "details__portfolio_det_mf__t0": [
+    { "category": "投資信託", "銘柄名": "サンプル全世界ファンド", "評価額": "600,000", "保有金融機関": "サンプル証券A" },
+    { "category": "投資信託", "銘柄名": "サンプル米国ファンド", "評価額": "500,000", "保有金融機関": "サンプル証券B" }
+  ],
+  "details__portfolio_det_pns__t0": [
+    { "category": "年金", "名称": "サンプルDCバランス", "現在価値": "300,000", "評価損益率": "12.5" }
+  ],
+  "details__portfolio_det_po__t0": [
+    { "category": "ポイント・マイル", "名称": "サンプルポイント", "現在の価値": "200,000", "保有金融機関": "サンプルポイントクラブ" }
+  ],
+  "details__liability_det__t0-liability": [
+    { "category": "負債詳細", "種類": "クレジットカード", "名称・説明": "ショッピング利用", "残高": "120,000", "保有金融機関": "サンプルカード" },
+    { "category": "負債詳細", "種類": "住宅ローン", "名称・説明": "住宅ローン残高", "残高": "380,000", "保有金融機関": "サンプル銀行B" }
+  ],
+  "mfcf": [
+    {"date":"2026-02-12","amount":-3000,"currency":"JPY","name":"クレジットカード","category":"現金・カード/カード引き落とし","is_transfer":false},
+    {"date":"2026-02-11","amount":-6395,"currency":"JPY","name":"レストラン","category":"食費/その他食費","is_transfer":false},
+    {"date":"2026-02-11","amount":-2200,"currency":"JPY","name":"日用品購入","category":"交通費/その他交通費","is_transfer":false},
+    {"date":"2026-02-11","amount":-3916,"currency":"JPY","name":"カフェ","category":"食費/外食","is_transfer":false},
+    {"date":"2026-02-11","amount":5000,"currency":"JPY","name":"チャージ(入金)","category":"","is_transfer":true},
+    {"date":"2026-02-11","amount":-5000,"currency":"JPY","name":"メルペイ","category":"","is_transfer":true},
+    {"date":"2026-02-25","amount":300000,"currency":"JPY","name":"給与","category":"収入/給与","is_transfer":false},
+    {"date":"2026-02-05","amount":-80000,"currency":"JPY","name":"住宅ローン","category":"住宅/ローン返済","is_transfer":false},
+    {"date":"2026-01-25","amount":300000,"currency":"JPY","name":"給与","category":"収入/給与","is_transfer":false},
+    {"date":"2026-01-15","amount":-15000,"currency":"JPY","name":"電気代","category":"水道・光熱費/電気代","is_transfer":false},
+    {"date":"2026-01-10","amount":-10000,"currency":"JPY","name":"スーパー","category":"食費/食料品","is_transfer":false},
+    {"date":"2025-12-25","amount":300000,"currency":"JPY","name":"給与","category":"収入/給与","is_transfer":false},
+    {"date":"2025-12-20","amount":50000,"currency":"JPY","name":"賞与","category":"収入/賞与","is_transfer":false},
+    {"date":"2025-12-10","amount":-50000,"category":"特別な支出","name":"旅行費用","is_transfer":false},
+    {"date":"2025-11-25","amount":300000,"currency":"JPY","name":"給与","category":"収入/給与","is_transfer":false},
+    {"date":"2025-11-05","amount":-80000,"currency":"JPY","name":"家賃","category":"住宅/管理費","is_transfer":false},
+    {"date":"2025-10-25","amount":300000,"currency":"JPY","name":"給与","category":"収入/給与","is_transfer":false},
+    {"date":"2025-10-15","amount":-12000,"currency":"JPY","name":"電気代","category":"水道・光熱費/電気代","is_transfer":false},
+    {"date":"2025-09-25","amount":300000,"currency":"JPY","name":"給与","category":"収入/給与","is_transfer":false},
+    {"date":"2025-09-05","amount":-80000,"currency":"JPY","name":"家賃","category":"住宅/管理費","is_transfer":false}
+  ]
+}
