@@ -54,8 +54,10 @@ const {
   householdType,
   userBirthDate,
   spouseBirthDate,
-  dependentBirthDate,
+  dependentBirthDates,
   independenceAge,
+  addDependentBirthDate,
+  removeDependentBirthDate,
   pensionConfig,
   manualInitialRiskAssets,
   manualInitialCashAssets,
@@ -85,7 +87,13 @@ const {
         </div>
         <div class="filter-item" v-if="householdType === 'family'">
           <label>生年月日 (子)</label>
-          <input v-model="dependentBirthDate" type="date" />
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div v-for="(birthDate, idx) in dependentBirthDates" :key="idx" style="display: flex; gap: 8px; align-items: center;">
+              <input v-model="dependentBirthDates[idx]" type="date" />
+              <button type="button" v-if="dependentBirthDates.length > 1" @click="removeDependentBirthDate(idx)">削除</button>
+            </div>
+            <button type="button" v-if="dependentBirthDates.length < 3" @click="addDependentBirthDate">子を追加</button>
+          </div>
         </div>
         <div class="filter-item" v-if="householdType === 'family'">
           <label>子の独立年齢</label>
