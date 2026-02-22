@@ -13,6 +13,7 @@ describe("parse helpers", () => {
     expect(toNumber("(1,200円)")).toBe(-1200);
     expect(toNumber("▲1,200")).toBe(-1200);
     expect(toNumber("△1,200")).toBe(-1200);
+    expect(toNumber(undefined)).toBe(0);
   });
 
   it("toPercent supports both raw and percent strings", () => {
@@ -24,5 +25,6 @@ describe("parse helpers", () => {
     expect(toPercent(null)).toBe(0);
     expect(toPercent("(9.94%)")).toBe(-9.94);
     expect(toPercent("▲9.94%")).toBe(-9.94);
+    expect(toPercent("△9.94%")).toBe(-9.94);
   });
 });
