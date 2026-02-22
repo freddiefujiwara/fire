@@ -34,7 +34,7 @@ defineEmits(["download"]);
             <th class="text-right" title="定期収入（給与等） + 年金受給額の合算です。">収入 (年金込)</th>
             <th class="text-right" title="年間支出 = (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算）">支出</th>
             <th class="text-right" title="当年中の運用リターン合計。月次複利で計算されます。">運用益(当年分)</th>
-            <th class="text-right" title="資産取崩し額 = Max(0, Max(支出, 資産×取崩率) - 収入 - 年金) ※税金考慮時はグロスアップ算出">取り崩し額</th>
+            <th class="text-right" title="資産取崩し額 = Max(0, Max(支出-収入-年金, 資産×取崩率))。FIRE後は収入や現金があっても取崩率ルールで計上される場合があります（税金考慮時はグロスアップ算出）">取り崩し額</th>
             <th class="text-right" title="金融資産(合計) = 貯金額(現金) + リスク資産額。100歳時点で0以上なら成功です。">金融資産(合計)</th>
             <th class="text-right" title="貯金額 = 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）">貯金額</th>
             <th class="text-right" title="リスク資産額 = 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)">リスク資産額</th>
@@ -46,7 +46,7 @@ defineEmits(["download"]);
             <td class="amount-value text-right" :title="`定期収入: ${formatYen(row.income)} + 年金: ${formatYen(row.pension)}` ">{{ formatYen(row.income + row.pension) }}</td>
             <td class="amount-value text-right" title="基本生活費（インフレ調整済） + 住宅ローン返済額 + FIRE後追加支出">{{ formatYen(row.expenses) }}</td>
             <td class="amount-value text-right is-positive" title="リスク資産 × 期待リターン（月次複利の12ヶ月分合計）">{{ formatYen(row.investmentGain) }}</td>
-            <td class="amount-value text-right" :class="{ 'is-negative': row.withdrawal > 0 }" title="生活費の不足分、または取崩率ルールに基づく資産からの引出額（税金込）">
+            <td class="amount-value text-right" :class="{ 'is-negative': row.withdrawal > 0 }" title="生活費の不足分、または取崩率ルール（資産×取崩率）に基づく引出額。FIRE後は不足がなくても取崩率が優先される場合があります（税金込）">
               {{ formatYen(row.withdrawal) }}
             </td>
             <td class="amount-value text-right" style="font-weight: bold;" title="貯金額（現金） + リスク資産額">{{ formatYen(row.assets) }}</td>
