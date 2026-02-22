@@ -98,17 +98,10 @@ function calculateRequiredAssets({
   includePension = true,
   withdrawalRate = 0.04,
   pensionConfig,
-  baseMonthlyExpense,
-  simulationStartDate,
-  mortgageMonthlyPayment,
-  mortgagePayoffDate,
-  lifestyleReductionFactor,
-  independenceMonthKey,
-  independenceMonthKeys,
-  householdChildrenCount,
-  postFireExtraExpense,
   postFireFirstYearExtraExpense,
   m,
+  precalculatedBaseExpenses,
+  precalculatedExtraExpenses,
 }) {
   if (remainingMonths <= 0) return 0;
 
@@ -122,24 +115,12 @@ function calculateRequiredAssets({
     const age = currentAgeInSimulation + i / 12;
     const P = includePension ? calculateMonthlyPension(age, currentAgeInSimulation, pensionConfig) : 0;
 
-    const curMonthlyExp = calculateCurrentMonthlyExpense({
-      baseMonthlyExpense,
-      monthlyInflationRate: g,
-      monthIndex: m + i,
-      simulationStartDate,
-      mortgageMonthlyPayment,
-      mortgagePayoffDate,
-      lifestyleReductionFactor,
-      independenceMonthKey,
-      independenceMonthKeys,
-      householdChildrenCount,
-    });
-    const extraWithInf = (postFireExtraExpense || 0) * Math.pow(1 + g, m + i);
+    const baseE = precalculatedBaseExpenses[m + i] + precalculatedExtraExpenses[m + i];
     let spike = 0;
     if (i < 12) {
       spike = (postFireFirstYearExtraExpense / 12) * Math.pow(1 + g, m + i);
     }
-    const E = curMonthlyExp + extraWithInf + spike;
+    const E = baseE + spike;
 
     const W_expense = Math.max(0, E - P);
     const A_case1 = (A / (1 + r)) + W_expense / (1 - t);
@@ -274,7 +255,7 @@ export function normalizeFireParams(params) {
   };
 }
 
-function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, returnsArray = null } = {}) {
+function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, returnsArray = null, skipRequiredAssets = false } = {}) {
   const {
     initialAssets,
     riskAssets,
@@ -326,18 +307,13 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     lifestyleReductionFactor = 0.8; // Default approx 20% reduction if no breakdown provided
   }
 
-  for (let m = 0; m <= simulationLimit; m++) {
-    const ageAtMonthM = currentAge + m / 12;
-    const remainingMonths = Math.max(0, totalMonthsUntil100 - m);
-
-    if (m === fireReachedMonth) {
-      currentCash += retirementLumpSumAtFire;
-    }
-
+  const precalculatedBaseExpenses = [];
+  const precalculatedExtraExpenses = [];
+  for (let k = 0; k <= simulationLimit; k++) {
     const curMonthlyExp = calculateCurrentMonthlyExpense({
       baseMonthlyExpense: monthlyExp,
       monthlyInflationRate,
-      monthIndex: m,
+      monthIndex: k,
       simulationStartDate,
       mortgageMonthlyPayment,
       mortgagePayoffDate,
@@ -345,7 +321,18 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       independenceMonthKeys,
       householdChildrenCount,
     });
-    const extraWithInf = postFireExtraExpense * Math.pow(1 + monthlyInflationRate, m);
+    const extraWithInf = postFireExtraExpense * Math.pow(1 + monthlyInflationRate, k);
+    precalculatedBaseExpenses.push(curMonthlyExp);
+    precalculatedExtraExpenses.push(extraWithInf);
+  }
+
+  for (let m = 0; m <= simulationLimit; m++) {
+    const ageAtMonthM = currentAge + m / 12;
+    const remainingMonths = Math.max(0, totalMonthsUntil100 - m);
+
+    if (m === fireReachedMonth) {
+      currentCash += retirementLumpSumAtFire;
+    }
 
     let firstYearSpikeWithInf = 0;
     if (fireReachedMonth !== -1 && m >= fireReachedMonth && m < fireReachedMonth + 12) {
@@ -359,11 +346,11 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     const curPension = includePension ? calculateMonthlyPension(ageAtMonthM, fireAgeAtMonthM, pensionConfig) : 0;
 
     const monthlyIncomeVal = isFire ? 0 : monthlyIncome;
-    const monthlyExpensesVal = curMonthlyExp + (isFire ? extraWithInf : 0) + firstYearSpikeWithInf;
+    const monthlyExpensesVal = precalculatedBaseExpenses[m] + (isFire ? precalculatedExtraExpenses[m] : 0) + firstYearSpikeWithInf;
     const incomeAvailable = monthlyIncomeVal + curPension;
 
     if (recordMonthly && m <= maxMonths) {
-      const reqAssets = calculateRequiredAssets({
+      const reqAssets = skipRequiredAssets ? 0 : calculateRequiredAssets({
         monthlyReturn: monthlyReturnMean,
         monthlyInflation: monthlyInflationRate,
         remainingMonths,
@@ -373,16 +360,10 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         includePension,
         withdrawalRate,
         pensionConfig,
-        baseMonthlyExpense: monthlyExp,
-        simulationStartDate,
-        mortgageMonthlyPayment,
-        mortgagePayoffDate,
-        lifestyleReductionFactor,
-        independenceMonthKeys,
-        householdChildrenCount,
-        postFireExtraExpense,
         postFireFirstYearExtraExpense,
         m,
+        precalculatedBaseExpenses,
+        precalculatedExtraExpenses,
       });
 
       monthlyData.push({
@@ -634,7 +615,8 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
     const res = _runCoreSimulation(params, {
       fireMonth,
       returnsArray,
-      recordMonthly: true
+      recordMonthly: true,
+      skipRequiredAssets: true
     });
 
     finalAssetsList.push(res.finalAssets);
