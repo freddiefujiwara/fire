@@ -26,8 +26,8 @@ jobs:
         VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
     - name: Generate OGP Image from GAS JSON
       run: |
-        # URL-encoded title: Asset Visualizer
-        JSON_RESPONSE=$(curl -L -s "https://script.google.com/macros/s/AKfycbzbMAKxkzHlwN8SY7ygJA34xYESMNNdkGNt8vv1XMcZSksgHsUwOxCCdP-wgg6fv7M/exec?t=Asset+Visualizer")
+        # URL-encoded title: FIRE simula
+        JSON_RESPONSE=$(curl -L -s "https://script.google.com/macros/s/AKfycbzbMAKxkzHlwN8SY7ygJA34xYESMNNdkGNt8vv1XMcZSksgHsUwOxCCdP-wgg6fv7M/exec?t=FIRE+simulator")
         echo $JSON_RESPONSE | jq -r '.png' | base64 -d > ./dist/ogp.png
         ls -lh ./dist/ogp.png
 
