@@ -70,7 +70,6 @@ export function generateAlgorithmExplanationSegments(params) {
 }
 
 function calculateRequiredAssets({
-  monthlyExpense,
   monthlyReturn,
   monthlyInflation,
   remainingMonths,
@@ -80,6 +79,15 @@ function calculateRequiredAssets({
   includePension = true,
   withdrawalRate = 0.04,
   pensionConfig,
+  baseMonthlyExpense,
+  simulationStartDate,
+  mortgageMonthlyPayment,
+  mortgagePayoffDate,
+  lifestyleReductionFactor,
+  independenceMonthKey,
+  postFireExtraExpense,
+  postFireFirstYearExtraExpense,
+  m,
 }) {
   if (remainingMonths <= 0) return 0;
 
@@ -92,7 +100,23 @@ function calculateRequiredAssets({
   for (let i = remainingMonths - 1; i >= 0; i--) {
     const age = currentAgeInSimulation + i / 12;
     const P = includePension ? calculateMonthlyPension(age, currentAgeInSimulation, pensionConfig) : 0;
-    const E = monthlyExpense * Math.pow(1 + g, i);
+
+    const curMonthlyExp = calculateCurrentMonthlyExpense({
+      baseMonthlyExpense,
+      monthlyInflationRate: g,
+      monthIndex: m + i,
+      simulationStartDate,
+      mortgageMonthlyPayment,
+      mortgagePayoffDate,
+      lifestyleReductionFactor,
+      independenceMonthKey,
+    });
+    const extraWithInf = (postFireExtraExpense || 0) * Math.pow(1 + g, m + i);
+    let spike = 0;
+    if (i < 12) {
+      spike = (postFireFirstYearExtraExpense / 12) * Math.pow(1 + g, m + i);
+    }
+    const E = curMonthlyExp + extraWithInf + spike;
 
     const W_expense = Math.max(0, E - P);
     const A_case1 = (A / (1 + r)) + W_expense / (1 - t);
@@ -202,6 +226,7 @@ export function normalizeFireParams(params) {
     pensionConfig: params.pensionConfig || DEFAULT_PENSION_CONFIG,
     dependentBirthDate: params.dependentBirthDate || null,
     independenceAge: params.independenceAge || 24,
+    householdType: params.householdType || "single",
   };
 }
 
@@ -229,6 +254,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     pensionConfig,
     dependentBirthDate,
     independenceAge,
+    householdType,
   } = params;
 
   const monthlyExp = monthlyExpense;
@@ -245,7 +271,10 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   const monthlyData = recordMonthly ? [] : null;
 
   const simulationLimit = totalMonthsUntil100;
-  const lifestyleReductionFactor = calculateLifestyleReduction(params.expenseBreakdown);
+  let lifestyleReductionFactor = calculateLifestyleReduction(params.expenseBreakdown);
+  if (lifestyleReductionFactor === 1.0 && householdType === "family") {
+    lifestyleReductionFactor = 0.7; // Default approx 30% reduction if no breakdown provided
+  }
 
   for (let m = 0; m <= simulationLimit; m++) {
     const ageAtMonthM = currentAge + m / 12;
@@ -284,7 +313,6 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
     if (recordMonthly && m <= maxMonths) {
       const reqAssets = calculateRequiredAssets({
-        monthlyExpense: curMonthlyExp + extraWithInf + (m >= fireReachedMonth && m < fireReachedMonth + 12 ? (postFireFirstYearExtraExpense / 12) * Math.pow(1 + monthlyInflationRate, m) : 0),
         monthlyReturn: monthlyReturnMean,
         monthlyInflation: monthlyInflationRate,
         remainingMonths,
@@ -294,6 +322,15 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         includePension,
         withdrawalRate,
         pensionConfig,
+        baseMonthlyExpense: monthlyExp,
+        simulationStartDate,
+        mortgageMonthlyPayment,
+        mortgagePayoffDate,
+        lifestyleReductionFactor,
+        independenceMonthKey,
+        postFireExtraExpense,
+        postFireFirstYearExtraExpense,
+        m,
       });
 
       monthlyData.push({
