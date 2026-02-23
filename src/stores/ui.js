@@ -1,16 +1,18 @@
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 
+const PRIVACY_STORAGE_KEY = "fire-privacy";
+
 /**
  * Create UI store state for privacy mode and persistence.
  * @param {void} _unused - This function does not take input.
  * @returns {{privacyMode: import('vue').Ref<boolean>, togglePrivacy: () => void}} Store state and actions.
  */
 export const useUiStore = defineStore("ui", () => {
-  const privacyMode = ref(localStorage.getItem("asset-privacy") === "on");
+  const privacyMode = ref(localStorage.getItem(PRIVACY_STORAGE_KEY) === "on");
 
   watch(privacyMode, (enabled) => {
-    localStorage.setItem("asset-privacy", enabled ? "on" : "off");
+    localStorage.setItem(PRIVACY_STORAGE_KEY, enabled ? "on" : "off");
     document.documentElement.setAttribute("data-private", enabled ? "on" : "off");
   });
 

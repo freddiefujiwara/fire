@@ -1,7 +1,7 @@
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import { useUiStore } from "@/stores/ui";
 
-const THEME_STORAGE_KEY = "asset-theme";
+const THEME_STORAGE_KEY = "fire-theme";
 
 /**
  * Manage app shell state for theme and privacy.
@@ -52,6 +52,7 @@ export function useAppShellViewModel() {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (savedTheme === "light" || savedTheme === "dark") {
       theme.value = savedTheme;
+
     }
 
     applyTheme(theme.value);
