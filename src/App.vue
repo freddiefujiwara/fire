@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { RouterView } from "vue-router";
+import { RouterView, RouterLink } from "vue-router";
 import { useAppShellViewModel } from "@/features/app/useAppShellViewModel";
 
 const {
@@ -28,7 +28,7 @@ const shareCurrentResult = async () => {
   try {
     if (navigator.share) {
       await navigator.share({
-        title: "FIRE Simulator",
+        title: "FIRE シミュレータ",
         text: "現在の資産シミュレーション結果",
         url: shareUrl,
       });
@@ -49,7 +49,7 @@ const shareCurrentResult = async () => {
 <template>
   <div class="layout">
     <header class="header">
-      <h1>FIRE Simulator</h1>
+      <h1>FIRE シミュレータ</h1>
       <div class="header-actions">
         <div class="header-buttons">
           <button class="theme-toggle" type="button" @click="togglePrivacy">
@@ -61,6 +61,9 @@ const shareCurrentResult = async () => {
           <button class="theme-toggle" type="button" @click="openShareDialog">
             共有する
           </button>
+          <RouterLink to="/" class="theme-toggle" style="text-decoration: none;">
+            リセット
+          </RouterLink>
         </div>
       </div>
     </header>
