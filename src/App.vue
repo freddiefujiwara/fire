@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { RouterView } from "vue-router";
+import { RouterView, RouterLink } from "vue-router";
 import { useAppShellViewModel } from "@/features/app/useAppShellViewModel";
 
 const {
@@ -61,9 +61,9 @@ const shareCurrentResult = async () => {
           <button class="theme-toggle" type="button" @click="openShareDialog">
             共有する
           </button>
-          <a class="theme-toggle" href="/fire/" style="text-decoration: none;">
+          <RouterLink to="/" class="theme-toggle" style="text-decoration: none;">
             リセット
-          </a>
+          </RouterLink>
         </div>
       </div>
     </header>

@@ -38,6 +38,10 @@ export function useFireSimulatorViewModel() {
   const router = useRouter();
   const route = useRoute();
 
+  // Constants for auto-calculation
+  const DEFAULT_BONUS_RATIO = 2.5; // 1M bonus / 400k income
+  const DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO = 0.1; // 10% of annual income for tax/social insurance spike
+
   // New Configuration State
   const householdType = ref("family"); // single, couple, family
   const userBirthDate = ref(DEFAULT_USER_BIRTH_DATE);
@@ -76,10 +80,6 @@ export function useFireSimulatorViewModel() {
   const manualMonthlyExpense = ref(300000);
   const manualRegularMonthlyIncome = ref(400000);
 
-  // Constants for auto-calculation
-  const DEFAULT_BONUS_RATIO = 2.5; // 1M bonus / 400k income
-  const DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO = 0.1; // 10% of annual income for tax/social insurance spike
-
   const manualAnnualBonus = ref(manualRegularMonthlyIncome.value * DEFAULT_BONUS_RATIO);
   const isAnnualBonusManual = ref(false);
 
@@ -90,6 +90,8 @@ export function useFireSimulatorViewModel() {
 
   const mortgageMonthlyPayment = ref(0);
   const mortgagePayoffDate = ref("");
+
+  const monteCarloResults = ref(null);
 
   // URL State Sync
   const stateToSync = {
@@ -126,52 +128,117 @@ export function useFireSimulatorViewModel() {
     mpd: mortgagePayoffDate,
   };
 
-  let pensionDataAgeLoadedFromUrl = false;
-  let basicReductionLoadedFromUrl = false;
-  let earlyReductionLoadedFromUrl = false;
   /**
-   * Load state values from the compressed URL parameter.
-   * @param {void} _unused - This function does not take input.
-   * @returns {void} Nothing is returned.
+   * Get the default state values as a plain object.
+   * @returns {object} Default state.
    */
-  const loadFromUrl = () => {
-    const p = route.params.p;
-    if (p) {
-      const decoded = decode(p);
-      if (decoded) {
-        Object.entries(stateToSync).forEach(([key, refVar]) => {
-          if (decoded[key] !== undefined) {
-            if (key === "pc") {
-              refVar.value = { ...refVar.value, ...decoded[key] };
-              pensionDataAgeLoadedFromUrl = decoded[key]?.pensionDataAge !== undefined;
-              basicReductionLoadedFromUrl = decoded[key]?.basicReduction !== undefined;
-              earlyReductionLoadedFromUrl = decoded[key]?.earlyReduction !== undefined;
-            } else {
-              refVar.value = decoded[key];
-            }
-          }
-        });
-        if ((!decoded.dbds || decoded.dbds.length === 0) && decoded.dbd) {
-          dependentBirthDates.value = [decoded.dbd];
-        }
-      }
+  const getDefaultState = () => ({
+    ht: "family",
+    ubd: DEFAULT_USER_BIRTH_DATE,
+    sbd: DEFAULT_SPOUSE_BIRTH_DATE,
+    dbds: [DEFAULT_DEPENDENT_BIRTH_DATE],
+    ia: 24,
+    pc: {
+      ...DEFAULT_PENSION_CONFIG,
+      pensionDataAge: calculateAge(DEFAULT_USER_BIRTH_DATE),
+      basicReduction: 1.0,
+      earlyReduction: calculateStartAgeAdjustmentRate(65),
+    },
+    mira: 20000000,
+    mica: 5000000,
+    mi: 100000,
+    arr: 5,
+    ii: true,
+    ir: 2,
+    it: true,
+    tr: 20.315,
+    pfee: 60000,
+    rlsaf: 5000000,
+    mpffyee: 580000,
+    mpffyeem: false,
+    wr: 4,
+    ib: true,
+    sea: 100,
+    umc: false,
+    mct: 1000,
+    mcv: 15,
+    mcs: 123,
+    mme: 300000,
+    mrmi: 400000,
+    mab: 1000000,
+    mabm: false,
+    mmp: 0,
+    mpd: "",
+  });
+
+  /**
+   * Reset all reactive variables to their initial default values.
+   */
+  const resetToDefault = () => {
+    const defaults = getDefaultState();
+    Object.entries(stateToSync).forEach(([key, refVar]) => {
+      refVar.value = defaults[key];
+    });
+    if (monteCarloResults) {
+      monteCarloResults.value = null;
     }
   };
 
-  loadFromUrl();
-  if (!pensionDataAgeLoadedFromUrl) {
-    pensionConfig.value.pensionDataAge = currentAge.value;
-  }
-  if (!basicReductionLoadedFromUrl && route.params.p) {
-    pensionConfig.value.basicReduction = 1.0;
-  }
-  if (!earlyReductionLoadedFromUrl && route.params.p) {
-    pensionConfig.value.earlyReduction = calculateStartAgeAdjustmentRate(pensionConfig.value.userStartAge);
-  }
-  if (!Array.isArray(dependentBirthDates.value)) {
-    dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
-  }
-  dependentBirthDates.value = dependentBirthDates.value.filter(Boolean).slice(0, 3);
+  /**
+   * Load state values from the compressed URL parameter.
+   * @param {string|null} p - The compressed state string from the URL.
+   */
+  const loadFromUrl = (p) => {
+    if (!p) {
+      resetToDefault();
+      return;
+    }
+    const decoded = decode(p);
+    if (!decoded) return;
+
+    Object.entries(stateToSync).forEach(([key, refVar]) => {
+      if (decoded[key] !== undefined) {
+        if (key === "pc") {
+          refVar.value = { ...refVar.value, ...decoded[key] };
+        } else {
+          refVar.value = decoded[key];
+        }
+      }
+    });
+
+    if (decoded.pc?.pensionDataAge === undefined) {
+      pensionConfig.value.pensionDataAge = currentAge.value;
+    }
+    if (decoded.pc?.basicReduction === undefined) {
+      pensionConfig.value.basicReduction = 1.0;
+    }
+    if (decoded.pc?.earlyReduction === undefined) {
+      pensionConfig.value.earlyReduction = calculateStartAgeAdjustmentRate(pensionConfig.value.userStartAge);
+    }
+    if ((!decoded.dbds || decoded.dbds.length === 0) && decoded.dbd) {
+      dependentBirthDates.value = [decoded.dbd];
+    }
+    if (!Array.isArray(dependentBirthDates.value)) {
+      dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
+    }
+    dependentBirthDates.value = dependentBirthDates.value.filter(Boolean).slice(0, 3);
+  };
+
+  loadFromUrl(route.params.p);
+
+  watch(
+    () => route.params.p,
+    (newP) => {
+      // Avoid redundant loading if the state watcher just updated the URL
+      const currentState = {};
+      Object.entries(stateToSync).forEach(([key, refVar]) => {
+        currentState[key] = refVar.value;
+      });
+      if (newP !== encode(currentState)) {
+        loadFromUrl(newP);
+      }
+    },
+  );
 
   /**
    * Add one dependent birth date field when there is room.
@@ -206,6 +273,8 @@ export function useFireSimulatorViewModel() {
     }
   });
 
+  const DEFAULT_ENCODED_STATE = encode(getDefaultState());
+
   watch(
     () => {
       const state = {};
@@ -216,6 +285,12 @@ export function useFireSimulatorViewModel() {
     },
     (newState) => {
       const encoded = encode(newState);
+      if (encoded === route.params.p) return;
+
+      if (!route.params.p && encoded === DEFAULT_ENCODED_STATE) {
+        return;
+      }
+
       router.replace({
         params: { p: encoded },
       });
@@ -353,7 +428,6 @@ export function useFireSimulatorViewModel() {
 
   const algorithmExplanationFull = computed(() => algorithmExplanationSegments.value.map((seg) => seg.value).join(""));
 
-  const monteCarloResults = ref(null);
   const isCalculatingMonteCarlo = ref(false);
 
   /**
