@@ -61,6 +61,9 @@ const shareCurrentResult = async () => {
           <button class="theme-toggle" type="button" @click="openShareDialog">
             共有する
           </button>
+          <a class="theme-toggle" href="/fire/" style="text-decoration: none;">
+            リセット
+          </a>
         </div>
       </div>
     </header>
