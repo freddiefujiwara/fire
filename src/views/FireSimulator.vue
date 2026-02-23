@@ -19,6 +19,7 @@ const {
   manualPostFireFirstYearExtraExpense,
   withdrawalRate,
   includeBonus,
+  simulationEndAge,
   useMonteCarlo,
   monteCarloTrials,
   monteCarloVolatility,
@@ -206,6 +207,10 @@ const {
             </div>
             <NumericInput v-model="manualPostFireFirstYearExtraExpense" :step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
           </div>
+          <div class="filter-item">
+            <label>資産寿命の目標年齢 ({{ simulationEndAge }}歳)</label>
+            <input v-model.number="simulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
+          </div>
         </div>
       </details>
 
@@ -310,7 +315,7 @@ const {
             <div>
               <span class="meta">必要資産目安:</span>
               <span class="amount-value" style="margin-left: 8px;">{{ formatYen(requiredAssetsAtFire) }}</span>
-              <span class="meta"> ({{ fireAchievementAge }}歳時点・100歳寿命)</span>
+              <span class="meta"> ({{ fireAchievementAge }}歳時点・{{ simulationEndAge }}歳寿命)</span>
             </div>
             <div>
               <span class="meta">ローン完済年月:</span>
@@ -355,7 +360,7 @@ const {
 
     <div v-if="useMonteCarlo && monteCarloResults" class="card-grid monte-carlo-results">
       <article class="card highlight">
-        <h2>FIRE成功率 (100歳生存)</h2>
+        <h2>FIRE成功率 ({{ simulationEndAge }}歳生存)</h2>
         <p :class="monteCarloResults.successRate > 0.9 ? 'is-positive' : monteCarloResults.successRate > 0.5 ? 'is-warning' : 'is-negative'">
           {{ (monteCarloResults.successRate * 100).toFixed(1) }}%
         </p>

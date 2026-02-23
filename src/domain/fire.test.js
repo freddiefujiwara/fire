@@ -721,6 +721,17 @@ describe("fire domain", () => {
     });
   });
 
+
+  describe("normalizeFireParams", () => {
+    it("clamps simulationEndAge between currentAge and 100", () => {
+      const clampedLow = normalizeFireParams({ currentAge: 88.2, simulationEndAge: 80 });
+      const clampedHigh = normalizeFireParams({ currentAge: 40, simulationEndAge: 150 });
+
+      expect(clampedLow.simulationEndAge).toBe(89);
+      expect(clampedHigh.simulationEndAge).toBe(100);
+    });
+  });
+
   describe("generateAnnualSimulation", () => {
     const params = {
       initialAssets: 10000000, retirementLumpSumAtFire: 0,
@@ -740,6 +751,17 @@ describe("fire domain", () => {
       expect(result[0].assets).toEqual(expect.any(Number));
       expect(result[0].assetsYearEnd).toEqual(expect.any(Number));
       expect(result[0]).toHaveProperty("fireMonthInYear");
+    });
+
+    it("respects custom simulation end age", () => {
+      const result = generateAnnualSimulation({
+        ...params,
+        simulationEndAge: 80,
+      });
+
+      // From age 40 to 80 (inclusive) -> 41 points
+      expect(result.length).toBe(41);
+      expect(result[result.length - 1].age).toBe(80);
     });
 
     it("marks FIRE month in annual row and keeps monthly/start-vs-end separation", () => {
