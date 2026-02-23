@@ -96,7 +96,8 @@ body {
   text-underline-offset: 2px;
 }
 
-.theme-toggle {
+.theme-toggle,
+.pill-btn {
   border: 1px solid var(--border);
   background: var(--surface-elevated);
   color: var(--text);
@@ -104,6 +105,7 @@ body {
   padding: 6px 12px;
   font: inherit;
   cursor: pointer;
+  width: fit-content;
 }
 
 .share-dialog-backdrop {
@@ -247,9 +249,6 @@ td {
     justify-content: flex-start;
   }
 
-  .theme-toggle {
-    width: fit-content;
-  }
 
   .section-jump {
     position: sticky;
