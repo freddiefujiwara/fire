@@ -10,6 +10,11 @@ export const DEFAULT_PENSION_CONFIG = {
   includeSpouse: true,
 };
 
+/**
+ * Calculate pension adjustment rate from the pension start age.
+ * @param {number} userStartAge - User age when pension payments start.
+ * @returns {number} Multiplier applied to the pension amount.
+ */
 export function calculateStartAgeAdjustmentRate(userStartAge) {
   const normalizedStartAge = Number(userStartAge);
   if (!Number.isFinite(normalizedStartAge)) return 1.0;
@@ -27,7 +32,11 @@ export function calculateStartAgeAdjustmentRate(userStartAge) {
 }
 
 /**
- * Calculate monthly pension amount for one user age.
+ * Calculate the total monthly pension amount for one age point in the simulation.
+ * @param {number} age - Current age to evaluate.
+ * @param {number} fireAge - Age when work income ends.
+ * @param {object} [config=DEFAULT_PENSION_CONFIG] - Pension settings used in the calculation.
+ * @returns {number} Monthly pension amount rounded to yen.
  */
 export function calculateMonthlyPension(age, fireAge, config = DEFAULT_PENSION_CONFIG) {
   let totalAnnual = 0;

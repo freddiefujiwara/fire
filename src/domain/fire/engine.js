@@ -13,6 +13,11 @@ const SIMULATION_END_AGE = 100;
 /**
  * Create text segments that explain the FIRE algorithm.
  */
+/**
+ * Build readable explanation segments for the simulation result.
+ * @param {object} params - Values used to build each explanation segment.
+ * @returns {Array<{type: string, value: string}>} Explanation parts in display order.
+ */
 export function generateAlgorithmExplanationSegments(params) {
   const {
     fireAchievementAge,
@@ -141,6 +146,11 @@ export function generateAlgorithmExplanationSegments(params) {
   return segments;
 }
 
+/**
+ * Estimate the minimum assets needed at one month so funds last to age 100.
+ * @param {object} params - Inputs for backward required-asset calculation.
+ * @returns {number} Required asset amount for the month.
+ */
 function calculateRequiredAssets({
   monthlyReturn,
   monthlyInflation,
@@ -185,10 +195,20 @@ function calculateRequiredAssets({
   return Math.max(0, A);
 }
 
+/**
+ * Convert a date object to a YYYY-MM key string.
+ * @param {Date} date - Date to convert.
+ * @returns {string} Month key text.
+ */
 function toMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/**
+ * Calculate the monthly expense after inflation, mortgage, and family changes.
+ * @param {object} params - Expense inputs for one month.
+ * @returns {number} Expense amount for that month.
+ */
 function calculateCurrentMonthlyExpense({
   baseMonthlyExpense,
   monthlyInflationRate,
@@ -231,6 +251,11 @@ function calculateCurrentMonthlyExpense({
   return inflatedNonMortgage + mortgage;
 }
 
+/**
+ * Get expense reduction factor based on how many children became independent.
+ * @param {object} params - Child count and lifestyle settings.
+ * @returns {number} Multiplier for non-mortgage expenses.
+ */
 function calculateFamilyExpenseReduction({ householdChildrenCount, independentChildrenCount, lifestyleReductionFactor }) {
   if (householdChildrenCount <= 1) {
     return independentChildrenCount > 0 ? lifestyleReductionFactor : 1.0;
@@ -245,6 +270,12 @@ function calculateFamilyExpenseReduction({ householdChildrenCount, independentCh
   return factors[Math.min(independentChildrenCount, 3)];
 }
 
+/**
+ * Build sorted month keys when each dependent becomes independent.
+ * @param {string[]} [dependentBirthDates=[]] - Dependent birth dates.
+ * @param {number} [independenceAge=24] - Age used as independence point.
+ * @returns {string[]} Sorted independence month keys.
+ */
 function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24) {
   /* c8 ignore next 1 */
   if (!Array.isArray(dependentBirthDates)) return [];
@@ -259,6 +290,11 @@ function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24
     .sort();
 }
 
+/**
+ * Normalize raw simulation input into a full parameter object.
+ * @param {object} params - Raw user settings.
+ * @returns {object} Normalized simulation settings.
+ */
 export function normalizeFireParams(params) {
   if (!params) return normalizeFireParams({});
   const monthlyExpense = params.monthlyExpense ?? (params.monthlyExpenses ? params.monthlyExpenses / 12 : 0);
@@ -292,6 +328,12 @@ export function normalizeFireParams(params) {
   };
 }
 
+/**
+ * Run one full FIRE simulation path with optional monthly recording.
+ * @param {object} params - Normalized simulation settings.
+ * @param {object} [options={}] - Runtime options for this run.
+ * @returns {{fireReachedMonth: number, monthlyData: Array<object>|null, survived: boolean, finalAssets: number}} Simulation result object.
+ */
 function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, returnsArray = null, skipRequiredAssets = false } = {}) {
   const {
     initialAssets,
@@ -479,6 +521,12 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   return { fireReachedMonth, monthlyData, survived, finalAssets: currentCash + currentRisk };
 }
 
+/**
+ * Find the earliest month where retiring still keeps assets alive to age 100.
+ * @param {object} params - Normalized simulation settings.
+ * @param {number[]|null} [returnsArray=null] - Monthly return path to use.
+ * @returns {number} Earliest safe FIRE month, or -1 when none found.
+ */
 function findSurvivalMonth(params, returnsArray = null) {
   const { currentAge, maxMonths } = params;
   const totalMonthsLimit = Math.min(maxMonths, (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR);
@@ -511,6 +559,12 @@ function findSurvivalMonth(params, returnsArray = null) {
   return result;
 }
 
+/**
+ * Run the main FIRE simulation with optional overrides.
+ * @param {object} inputParams - Raw simulation settings.
+ * @param {object} [options={}] - Optional controls for fire month and returns.
+ * @returns {{fireReachedMonth: number, monthlyData: Array<object>|null, survived: boolean, finalAssets: number}} Simulation result object.
+ */
 export function performFireSimulation(inputParams, options = {}) {
   const params = normalizeFireParams(inputParams);
   const { forceFireMonth = null, returnsArray = null, recordMonthly = false } = options;
@@ -535,6 +589,11 @@ export function performFireSimulation(inputParams, options = {}) {
   });
 }
 
+/**
+ * Create monthly growth rows for chart and table display.
+ * @param {object} params - Raw simulation settings.
+ * @returns {{table: Array<object>, fireReachedMonth: number}} Monthly growth table and fire month.
+ */
 export function generateGrowthTable(params) {
   const { monthlyData, fireReachedMonth } = performFireSimulation(params, { recordMonthly: true });
   return {
@@ -549,6 +608,11 @@ export function generateGrowthTable(params) {
   };
 }
 
+/**
+ * Convert monthly simulation data into yearly summary rows.
+ * @param {object} params - Raw simulation settings.
+ * @returns {Array<object>} Yearly simulation summary rows.
+ */
 export function generateAnnualSimulation(params) {
   const { monthlyData, fireReachedMonth } = performFireSimulation(params, { recordMonthly: true });
   const yearlySummaries = [];
@@ -581,6 +645,11 @@ export function generateAnnualSimulation(params) {
   return yearlySummaries;
 }
 
+/**
+ * Create a seeded random number generator.
+ * @param {number} seed - Seed value for reproducible random output.
+ * @returns {() => number} Function that returns a random number from 0 to 1.
+ */
 function createRandom(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -590,6 +659,11 @@ function createRandom(seed) {
   }
 }
 
+/**
+ * Sample one standard normal random value with Box-Muller method.
+ * @param {() => number} rand - Uniform random function.
+ * @returns {number} One normally distributed value.
+ */
 function nextGaussian(rand) {
   let u = 0, v = 0;
   while(u === 0) u = rand();
@@ -597,6 +671,12 @@ function nextGaussian(rand) {
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
+/**
+ * Run many simulations with random returns and report percentile outcomes.
+ * @param {object} inputParams - Raw simulation settings.
+ * @param {{trials?: number, annualVolatility?: number, seed?: number}} [options={}] - Monte Carlo controls.
+ * @returns {{successRate: number, p10: number, p50: number, p90: number, p10Path: number[], p50Path: number[], p90Path: number[], trials: number, fireReachedMonth: number}} Monte Carlo summary values.
+ */
 export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVolatility = 0.15, seed = 123 } = {}) {
   const params = normalizeFireParams(inputParams);
   const detResult = performFireSimulation(params);
@@ -679,6 +759,11 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
   };
 }
 
+/**
+ * Choose the effective dependent birth date list from old and new inputs.
+ * @param {{dependentBirthDate: string|null, dependentBirthDates: string[]}} params - Dependent birth date inputs.
+ * @returns {string[]} Effective dependent birth date list.
+ */
 function resolveDependentBirthDates({ dependentBirthDate, dependentBirthDates }) {
   const fallbackDependentBirthDates = dependentBirthDate ? [dependentBirthDate] : [];
   return (dependentBirthDates && dependentBirthDates.length > 0)
@@ -686,6 +771,11 @@ function resolveDependentBirthDates({ dependentBirthDate, dependentBirthDates })
     : fallbackDependentBirthDates;
 }
 
+/**
+ * Precompute base and extra expense arrays for all simulation months.
+ * @param {object} params - Values needed to build expense arrays.
+ * @returns {{precalculatedBaseExpenses: number[], precalculatedExtraExpenses: number[]}} Precalculated monthly expense arrays.
+ */
 function precalculateExpenses({
   simulationLimit,
   monthlyExp,
@@ -721,6 +811,11 @@ function precalculateExpenses({
   return { precalculatedBaseExpenses, precalculatedExtraExpenses };
 }
 
+/**
+ * Withdraw enough from risk assets while accounting for tax on gains.
+ * @param {object} params - Withdrawal request and portfolio values.
+ * @returns {{actualNetFromRisk: number, grossFromRisk: number, nextCostBasis: number, nextRisk: number}} Withdrawal result values.
+ */
 function withdrawFromRiskAssets({ neededNetAmount, currentRisk, currentCostBasis, includeTax, taxRate }) {
   const gainRatio = currentRisk > 0 ? Math.max(0, (currentRisk - currentCostBasis) / currentRisk) : 0;
   const taxDrag = includeTax ? gainRatio * taxRate : 0;
@@ -736,6 +831,12 @@ function withdrawFromRiskAssets({ neededNetAmount, currentRisk, currentCostBasis
   return { actualNetFromRisk, grossFromRisk, nextCostBasis, nextRisk };
 }
 
+/**
+ * Create a fixed monthly return array with the same value each month.
+ * @param {number} totalMonths - Number of months to include.
+ * @param {number} monthlyReturnMean - Return value for each month.
+ * @returns {number[]} Monthly return array.
+ */
 function createConstantReturnsArray(totalMonths, monthlyReturnMean) {
   const targetReturns = [];
   for (let m = 0; m <= totalMonths; m++) {
@@ -744,10 +845,22 @@ function createConstantReturnsArray(totalMonths, monthlyReturnMean) {
   return targetReturns;
 }
 
+/**
+ * Sum one numeric field from a list of objects.
+ * @param {Array<object>} items - Source list.
+ * @param {string} field - Field name to sum.
+ * @returns {number} Sum of field values.
+ */
 function sumByField(items, field) {
   return items.reduce((sum, item) => sum + item[field], 0);
 }
 
+/**
+ * Get a percentile value from a sorted numeric array by linear interpolation.
+ * @param {number[]} sortedValues - Sorted numeric values.
+ * @param {number} p - Percentile from 0 to 100.
+ * @returns {number} Interpolated percentile value.
+ */
 function interpolatePercentile(sortedValues, p) {
   if (sortedValues.length === 1) return sortedValues[0];
   const pos = (p / 100) * (sortedValues.length - 1);
