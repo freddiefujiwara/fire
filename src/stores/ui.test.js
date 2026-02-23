@@ -16,10 +16,11 @@ describe("ui store", () => {
   });
 
   it("initializes with privacyMode from localStorage (on)", () => {
-    localStorage.setItem("asset-privacy", "on");
+    localStorage.setItem("fire-privacy", "on");
     const ui = useUiStore();
     expect(ui.privacyMode).toBe(true);
   });
+
 
   it("toggles privacyMode", async () => {
     const ui = useUiStore();
@@ -28,14 +29,14 @@ describe("ui store", () => {
     expect(ui.privacyMode).toBe(true);
 
     await nextTick();
-    expect(localStorage.getItem("asset-privacy")).toBe("on");
+    expect(localStorage.getItem("fire-privacy")).toBe("on");
     expect(document.documentElement.getAttribute("data-private")).toBe("on");
 
     ui.togglePrivacy();
     expect(ui.privacyMode).toBe(false);
 
     await nextTick();
-    expect(localStorage.getItem("asset-privacy")).toBe("off");
+    expect(localStorage.getItem("fire-privacy")).toBe("off");
     expect(document.documentElement.getAttribute("data-private")).toBe("off");
   });
 });
