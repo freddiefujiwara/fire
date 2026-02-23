@@ -1,5 +1,11 @@
 import { calculateMonthlyPension } from "@/domain/fire";
 
+/**
+ * Build month options for mortgage payoff selection.
+ * @param {Date} [baseDate=new Date()] - First month shown in the option list.
+ * @param {number} [months=420] - Number of months to generate after the first month.
+ * @returns {{val: string, label: string}[]} Month option list for the UI.
+ */
 export function createMortgageOptions(baseDate = new Date(), months = 420) {
   const options = [];
   for (let i = 0; i <= months; i += 1) {
@@ -11,6 +17,12 @@ export function createMortgageOptions(baseDate = new Date(), months = 420) {
   return options;
 }
 
+/**
+ * Convert a month count into a calendar date label.
+ * @param {number} months - Number of months from the base date.
+ * @param {Date} [baseDate=new Date()] - Start date used for the month offset.
+ * @returns {string} Human readable FIRE date text.
+ */
 export function fireDate(months, baseDate = new Date()) {
   if (months >= 1200 || months < 0) return "未達成 (100年以上)";
   const date = new Date(baseDate);
@@ -18,6 +30,11 @@ export function fireDate(months, baseDate = new Date()) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
 
+/**
+ * Convert months into a simple year and month text.
+ * @param {number} months - Month count to format.
+ * @returns {string} Formatted duration text.
+ */
 export function formatMonths(months) {
   if (months >= 1200 || months < 0) return "100年以上";
   const years = Math.floor(months / 12);
@@ -26,6 +43,11 @@ export function formatMonths(months) {
   return `${years}年${remainingMonths}ヶ月`;
 }
 
+/**
+ * Build a JSON-friendly object that contains inputs, key results, and explanation text.
+ * @param {{conditions: object, monteCarloResults: object|null, monteCarloVolatility: number, monteCarloSeed: number, estimatedMonthlyPensionAt60: number, pensionAnnualAtFire: number, pensionEstimateAge: number, fireAchievementAge: number, algorithmExplanation: string}} params - Data used for the export JSON.
+ * @returns {object} Structured export object for copy and share actions.
+ */
 export function buildConditionsAndAlgorithmJson({
   conditions,
   monteCarloResults,
@@ -148,6 +170,11 @@ export function buildConditionsAndAlgorithmJson({
   };
 }
 
+/**
+ * Convert annual simulation rows into a compact JSON table.
+ * @param {Array<object>} annualSimulationData - Annual rows from the simulation.
+ * @returns {Array<object>} Converted annual table rows.
+ */
 export function buildAnnualTableJson(annualSimulationData) {
   return annualSimulationData.map((row) => ({
     age: row.age,
@@ -161,6 +188,11 @@ export function buildAnnualTableJson(annualSimulationData) {
   }));
 }
 
+/**
+ * Create a CSV string from annual simulation rows.
+ * @param {Array<object>} data - Annual simulation rows.
+ * @returns {string} CSV text with a BOM at the start.
+ */
 export function generateCsv(data) {
   const headers = [
     "年齢",

@@ -29,6 +29,11 @@ import {
   generateCsv,
 } from "@/features/fireSimulator/formatters";
 
+/**
+ * Build all reactive state and actions used by the FIRE simulator page.
+ * @param {void} _unused - This function does not take input.
+ * @returns {object} View model fields and actions for the simulator UI.
+ */
 export function useFireSimulatorViewModel() {
   const router = useRouter();
   const route = useRoute();
@@ -122,6 +127,11 @@ export function useFireSimulatorViewModel() {
   let pensionDataAgeLoadedFromUrl = false;
   let basicReductionLoadedFromUrl = false;
   let earlyReductionLoadedFromUrl = false;
+  /**
+   * Load state values from the compressed URL parameter.
+   * @param {void} _unused - This function does not take input.
+   * @returns {void} Nothing is returned.
+   */
   const loadFromUrl = () => {
     const p = route.params.p;
     if (p) {
@@ -161,11 +171,21 @@ export function useFireSimulatorViewModel() {
   }
   dependentBirthDates.value = dependentBirthDates.value.filter(Boolean).slice(0, 3);
 
+  /**
+   * Add one dependent birth date field when there is room.
+   * @param {void} _unused - This function does not take input.
+   * @returns {void} Nothing is returned.
+   */
   const addDependentBirthDate = () => {
     if (dependentBirthDates.value.length >= 3) return;
     dependentBirthDates.value.push(DEFAULT_DEPENDENT_BIRTH_DATE);
   };
 
+  /**
+   * Remove one dependent birth date by index.
+   * @param {number} index - Position to remove.
+   * @returns {void} Nothing is returned.
+   */
   const removeDependentBirthDate = (index) => {
     if (dependentBirthDates.value.length <= 1) return;
     dependentBirthDates.value.splice(index, 1);
@@ -332,6 +352,11 @@ export function useFireSimulatorViewModel() {
   const monteCarloResults = ref(null);
   const isCalculatingMonteCarlo = ref(false);
 
+  /**
+   * Run Monte Carlo simulation when enabled and store the result.
+   * @param {void} _unused - This function does not take input.
+   * @returns {void} Nothing is returned.
+   */
   const runMonteCarlo = () => {
     if (!useMonteCarlo.value) {
       monteCarloResults.value = null;
@@ -384,6 +409,11 @@ export function useFireSimulatorViewModel() {
     pensionConfig: pensionConfig.value,
   }));
 
+  /**
+   * Build a formatted JSON string for conditions and algorithm text.
+   * @param {void} _unused - This function does not take input.
+   * @returns {string} Pretty JSON text for copy action.
+   */
   const copyConditionsAndAlgorithm = () =>
     JSON.stringify(
       buildConditionsAndAlgorithmJson({
@@ -401,8 +431,18 @@ export function useFireSimulatorViewModel() {
       2,
     );
 
+  /**
+   * Build a formatted JSON string for the annual table.
+   * @param {void} _unused - This function does not take input.
+   * @returns {string} Pretty JSON text for copy action.
+   */
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
+  /**
+   * Generate and download the annual table as a CSV file.
+   * @param {void} _unused - This function does not take input.
+   * @returns {Promise<void>} Resolves after the download flow finishes.
+   */
   async function downloadAnnualTableCsv() {
     const data = annualSimulationData.value;
     if (!data || data.length === 0) return;
@@ -414,16 +454,33 @@ export function useFireSimulatorViewModel() {
     await triggerDownload(blob, fileName, csv);
   }
 
+  /**
+   * Check if the current browser looks like Safari.
+   * @param {void} _unused - This function does not take input.
+   * @returns {boolean} True when user agent matches Safari rules.
+   */
   function isLikelySafari() {
     const ua = navigator.userAgent;
     return /^((?!chrome|android).)*safari/i.test(ua);
   }
 
+  /**
+   * Check if the current device looks like iOS.
+   * @param {void} _unused - This function does not take input.
+   * @returns {boolean} True when platform looks like iOS.
+   */
   function isIOS() {
     const ua = navigator.userAgent;
     return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
+  /**
+   * Try share or fallback download for the CSV file.
+   * @param {Blob} blob - File data blob.
+   * @param {string} fileName - Name of the file to save.
+   * @param {string} csvText - Raw CSV text used for Safari fallback.
+   * @returns {Promise<void>} Resolves when download flow completes.
+   */
   async function triggerDownload(blob, fileName, csvText) {
     const file = new File([blob], fileName, { type: 'text/csv;charset=utf-8' });
 

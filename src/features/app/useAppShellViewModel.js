@@ -5,6 +5,8 @@ const THEME_STORAGE_KEY = "asset-theme";
 
 /**
  * Manage app shell state for theme and privacy.
+ * @param {void} _unused - This function does not take input.
+ * @returns {{themeLabel: import('vue').ComputedRef<string>, privacyLabel: import('vue').ComputedRef<string>, togglePrivacy: () => void, toggleTheme: () => void}} View model values and actions for the app shell.
  */
 export function useAppShellViewModel() {
   const theme = ref("dark");
@@ -16,6 +18,8 @@ export function useAppShellViewModel() {
 
   /**
    * Apply theme to document root.
+   * @param {string} nextTheme - Theme name to apply on the page.
+   * @returns {void} Nothing is returned.
    */
   const applyTheme = (nextTheme) => {
     document.documentElement.setAttribute("data-theme", nextTheme);
@@ -23,6 +27,8 @@ export function useAppShellViewModel() {
 
   /**
    * Toggle between dark and light theme.
+   * @param {void} _unused - This function does not take input.
+   * @returns {void} Nothing is returned.
    */
   const toggleTheme = () => {
     theme.value = isDark.value ? "light" : "dark";
@@ -30,11 +36,18 @@ export function useAppShellViewModel() {
 
   /**
    * Toggle privacy mode in UI store.
+   * @param {void} _unused - This function does not take input.
+   * @returns {void} Nothing is returned.
    */
   const togglePrivacy = () => {
     uiStore.togglePrivacy();
   };
 
+  /**
+   * Load theme from storage and apply it to the page.
+   * @param {void} _unused - This function does not take input.
+   * @returns {void} Nothing is returned.
+   */
   const initializeTheme = () => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (savedTheme === "light" || savedTheme === "dark") {
