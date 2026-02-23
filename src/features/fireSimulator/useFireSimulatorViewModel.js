@@ -348,7 +348,7 @@ export function useFireSimulatorViewModel() {
     return Math.max(userStart, pensionConfig.value.spouseUserAgeStart);
   });
   const pensionAnnualAtFire = computed(() => calculateMonthlyPension(pensionEstimateAge.value, fireAchievementAge.value, pensionConfig.value) * 12);
-  const estimatedMonthlyPensionAt60 = computed(() => calculateMonthlyPension(60, fireAchievementAge.value, pensionConfig.value));
+  const estimatedMonthlyPensionAtStartAge = computed(() => calculateMonthlyPension(pensionEstimateAge.value, fireAchievementAge.value, pensionConfig.value));
   const pensionParticipationEndAge = computed(() => Math.min(60, fireAchievementAge.value));
   const pensionFutureYears = computed(() => pensionParticipationEndAge.value - pensionConfig.value.pensionDataAge);
   const pensionProjectedAnnual = computed(() =>
@@ -499,7 +499,7 @@ export function useFireSimulatorViewModel() {
         monteCarloResults: monteCarloResults.value,
         monteCarloVolatility: monteCarloVolatility.value,
         monteCarloSeed: monteCarloSeed.value,
-        estimatedMonthlyPensionAt60: estimatedMonthlyPensionAt60.value,
+        estimatedMonthlyPensionAtStartAge: estimatedMonthlyPensionAtStartAge.value,
         pensionAnnualAtFire: pensionAnnualAtFire.value,
         pensionEstimateAge: pensionEstimateAge.value,
         fireAchievementAge: fireAchievementAge.value,
@@ -660,7 +660,7 @@ export function useFireSimulatorViewModel() {
     fireAchievementMonth,
     fireAchievementAge,
     pensionAnnualAtFire,
-    estimatedMonthlyPensionAt60,
+    estimatedMonthlyPensionAtStartAge,
     pensionParticipationEndAge,
     pensionFutureYears,
     pensionProjectedAnnual,

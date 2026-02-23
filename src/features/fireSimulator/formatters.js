@@ -53,7 +53,7 @@ export function buildConditionsAndAlgorithmJson({
   monteCarloResults,
   monteCarloVolatility,
   monteCarloSeed,
-  estimatedMonthlyPensionAt60,
+  estimatedMonthlyPensionAtStartAge,
   pensionAnnualAtFire,
   pensionEstimateAge,
   fireAchievementAge,
@@ -153,10 +153,9 @@ export function buildConditionsAndAlgorithmJson({
         fireAchievementAge: fireAchievementAgeFromConditions,
       },
       pensionEstimates: {
-        householdMonthlyAtUserAge60Yen: estimatedMonthlyPensionAt60,
+        householdMonthlyAtStartAgeYen: estimatedMonthlyPensionAtStartAge,
         householdAnnualAtPensionEstimateAgeYen: pensionAnnualAtFire,
         pensionEstimateAge,
-        userMonthlyAtAge60Yen: calculateMonthlyPension(60, fireAchievementAge, pensionConfig),
         spouseBasicMonthlyEquivalentYen: Math.round(pensionConfig.basicFullAnnualYen / 12),
         spouseBasicMonthlyAtPensionEstimateAgeYen:
           pensionConfig.includeSpouse && pensionEstimateAge >= pensionConfig.spouseUserAgeStart

@@ -43,7 +43,7 @@ const {
   annualSimulationData,
   fireAchievementMonth,
   fireAchievementAge,
-  estimatedMonthlyPensionAt60,
+  estimatedMonthlyPensionAtStartAge,
   requiredAssetsAtFire,
   chartAnnotations,
   fireDate,
@@ -421,7 +421,7 @@ const commitSimulationEndAge = () => {
       </article>
       <article class="card">
         <h2>設定された開始年齢での毎月の年金受給額（見込み）</h2>
-        <p class="amount-value">{{ formatYen(estimatedMonthlyPensionAt60) }}</p>
+        <p class="amount-value">{{ formatYen(estimatedMonthlyPensionAtStartAge) }}</p>
         <p class="meta">{{ fireAchievementAge }}歳でFIREした場合の概算</p>
       </article>
     </div>
