@@ -11,9 +11,6 @@ const MONTHS_PER_YEAR = 12;
 const SIMULATION_END_AGE = 100;
 
 /**
- * Create text segments that explain the FIRE algorithm.
- */
-/**
  * Build readable explanation segments for the simulation result.
  * @param {object} params - Values used to build each explanation segment.
  * @returns {Array<{type: string, value: string}>} Explanation parts in display order.
