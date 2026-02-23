@@ -32,6 +32,12 @@ describe("App integration", () => {
     });
 
     localStorage.clear();
+    Object.assign(navigator, {
+      share: undefined,
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it("renders fire simulator directly", async () => {
@@ -46,5 +52,25 @@ describe("App integration", () => {
 
     expect(wrapper.text()).toContain("FIRE Simulator");
     expect(wrapper.text()).toContain("fire-view");
+  });
+
+  it("shows a share confirmation dialog before sharing", async () => {
+    const router = makeRouter("/");
+    await router.isReady();
+
+    const wrapper = mount(App, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const buttons = wrapper.findAll(".header-buttons .theme-toggle");
+    await buttons[2].trigger("click");
+
+    expect(wrapper.text()).toContain("共有前の確認");
+    expect(wrapper.text()).toContain("入力値");
+    expect(wrapper.text()).toContain("計算結果");
+    expect(wrapper.text()).toContain("信頼できる家族や友人");
+    expect(wrapper.text()).toContain("ブックマーク等に保存");
   });
 });
