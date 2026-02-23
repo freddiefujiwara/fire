@@ -7,6 +7,9 @@ export {
   calculateStartAgeAdjustmentRate,
 };
 
+const MONTHS_PER_YEAR = 12;
+const SIMULATION_END_AGE = 100;
+
 /**
  * Create text segments that explain the FIRE algorithm.
  */
@@ -209,16 +212,11 @@ function calculateCurrentMonthlyExpense({
   const keyList = independenceMonthKeys.length > 0 ? independenceMonthKeys : (independenceMonthKey ? [independenceMonthKey] : []);
   const independentChildrenCount = keyList.filter((key) => currentMonthKey >= key).length;
 
-  let effectiveReduction = 1.0;
-  if (householdChildrenCount <= 1) {
-    effectiveReduction = independentChildrenCount > 0 ? lifestyleReductionFactor : 1.0;
-  } else if (householdChildrenCount === 2) {
-    const factors = [1.0, 0.85, 0.70];
-    effectiveReduction = factors[Math.min(independentChildrenCount, 2)];
-  } else {
-    const factors = [1.0, 0.90, 0.80, 0.65];
-    effectiveReduction = factors[Math.min(independentChildrenCount, 3)];
-  }
+  const effectiveReduction = calculateFamilyExpenseReduction({
+    householdChildrenCount,
+    independentChildrenCount,
+    lifestyleReductionFactor,
+  });
 
   const inflatedNonMortgage = (nonMortgageExpense * effectiveReduction) * Math.pow(1 + monthlyInflationRate, monthIndex);
 
@@ -231,6 +229,20 @@ function calculateCurrentMonthlyExpense({
   }
 
   return inflatedNonMortgage + mortgage;
+}
+
+function calculateFamilyExpenseReduction({ householdChildrenCount, independentChildrenCount, lifestyleReductionFactor }) {
+  if (householdChildrenCount <= 1) {
+    return independentChildrenCount > 0 ? lifestyleReductionFactor : 1.0;
+  }
+
+  if (householdChildrenCount === 2) {
+    const factors = [1.0, 0.85, 0.70];
+    return factors[Math.min(independentChildrenCount, 2)];
+  }
+
+  const factors = [1.0, 0.90, 0.80, 0.65];
+  return factors[Math.min(independentChildrenCount, 3)];
 }
 
 function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24) {
@@ -311,12 +323,9 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   const monthlyExp = monthlyExpense;
   const monthlyReturnMean = Math.pow(1 + annualReturnRate, 1 / 12) - 1;
   const monthlyInflationRate = Math.pow(1 + (includeInflation ? inflationRate : 0), 1 / 12) - 1;
-  const totalMonthsUntil100 = (100 - currentAge) * 12;
+  const totalMonthsUntil100 = (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR;
   const simulationStartDate = new Date();
-  const fallbackDependentBirthDates = dependentBirthDate ? [dependentBirthDate] : [];
-  const effectiveDependentBirthDates = (dependentBirthDates && dependentBirthDates.length > 0)
-    ? dependentBirthDates
-    : fallbackDependentBirthDates;
+  const effectiveDependentBirthDates = resolveDependentBirthDates({ dependentBirthDate, dependentBirthDates });
   const independenceMonthKeys = getIndependenceMonthKeys(effectiveDependentBirthDates, independenceAge);
   const householdChildrenCount = householdType === "family" ? effectiveDependentBirthDates.length : 0;
 
@@ -329,24 +338,18 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   const simulationLimit = totalMonthsUntil100;
   const lifestyleReductionFactor = householdType === "family" ? 0.8 : 1.0;
 
-  const precalculatedBaseExpenses = [];
-  const precalculatedExtraExpenses = [];
-  for (let k = 0; k <= simulationLimit; k++) {
-    const curMonthlyExp = calculateCurrentMonthlyExpense({
-      baseMonthlyExpense: monthlyExp,
-      monthlyInflationRate,
-      monthIndex: k,
-      simulationStartDate,
-      mortgageMonthlyPayment,
-      mortgagePayoffDate,
-      lifestyleReductionFactor,
-      independenceMonthKeys,
-      householdChildrenCount,
-    });
-    const extraWithInf = postFireExtraExpense * Math.pow(1 + monthlyInflationRate, k);
-    precalculatedBaseExpenses.push(curMonthlyExp);
-    precalculatedExtraExpenses.push(extraWithInf);
-  }
+  const { precalculatedBaseExpenses, precalculatedExtraExpenses } = precalculateExpenses({
+    simulationLimit,
+    monthlyExp,
+    monthlyInflationRate,
+    simulationStartDate,
+    mortgageMonthlyPayment,
+    mortgagePayoffDate,
+    lifestyleReductionFactor,
+    independenceMonthKeys,
+    householdChildrenCount,
+    postFireExtraExpense,
+  });
 
   for (let m = 0; m <= simulationLimit; m++) {
     const ageAtMonthM = currentAge + m / 12;
@@ -417,19 +420,19 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
       if (cashAfterFlow < 0) {
         const needed = Math.abs(cashAfterFlow);
-        const gainRatio = currentRisk > 0 ? Math.max(0, (currentRisk - currentCostBasis) / currentRisk) : 0;
-        const maxNetFromRisk = Math.max(0, currentRisk * (1 - (includeTax ? gainRatio * taxRate : 0)));
-        const actualNetFromRisk = Math.min(needed, maxNetFromRisk);
-        const grossFromRisk = actualNetFromRisk / (1 - (includeTax ? gainRatio * taxRate : 0));
+        const withdrawal = withdrawFromRiskAssets({
+          neededNetAmount: needed,
+          currentRisk,
+          currentCostBasis,
+          includeTax,
+          taxRate,
+        });
 
-        const costBasisWithdrawn = grossFromRisk * (1 - gainRatio);
-        currentCostBasis -= costBasisWithdrawn;
-        currentRisk -= grossFromRisk;
-        currentRisk = Math.max(0, currentRisk);
-        currentCostBasis = Math.max(0, currentCostBasis);
+        currentRisk = withdrawal.nextRisk;
+        currentCostBasis = withdrawal.nextCostBasis;
 
-        currentCash = cashAfterFlow + actualNetFromRisk;
-        monthlyWithdrawal = actualNetFromRisk > 0 ? grossFromRisk : 0;
+        currentCash = cashAfterFlow + withdrawal.actualNetFromRisk;
+        monthlyWithdrawal = withdrawal.actualNetFromRisk > 0 ? withdrawal.grossFromRisk : 0;
       } else {
         monthlyInvest = Math.min(monthlyInvestment, cashAfterFlow);
         currentCash = cashAfterFlow - monthlyInvest;
@@ -445,19 +448,19 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       const takenFromCash = Math.min(currentCash, netToTakeFromAssets);
       const remainingShortfall = netToTakeFromAssets - takenFromCash;
 
-      const gainRatio = currentRisk > 0 ? Math.max(0, (currentRisk - currentCostBasis) / currentRisk) : 0;
-      const maxNetFromRisk = Math.max(0, currentRisk * (1 - (includeTax ? gainRatio * taxRate : 0)));
-      const actualNetFromRisk = Math.min(remainingShortfall, maxNetFromRisk);
-      const grossFromRisk = actualNetFromRisk / (1 - (includeTax ? gainRatio * taxRate : 0));
+      const withdrawal = withdrawFromRiskAssets({
+        neededNetAmount: remainingShortfall,
+        currentRisk,
+        currentCostBasis,
+        includeTax,
+        taxRate,
+      });
 
-      const costBasisWithdrawn = grossFromRisk * (1 - gainRatio);
-      currentCostBasis -= costBasisWithdrawn;
-      currentRisk -= grossFromRisk;
-      currentRisk = Math.max(0, currentRisk);
-      currentCostBasis = Math.max(0, currentCostBasis);
+      currentRisk = withdrawal.nextRisk;
+      currentCostBasis = withdrawal.nextCostBasis;
 
-      currentCash += (incomeAvailable + actualNetFromRisk - monthlyExpensesVal);
-      monthlyWithdrawal = takenFromCash + grossFromRisk;
+      currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
+      monthlyWithdrawal = takenFromCash + withdrawal.grossFromRisk;
     }
 
     investmentGain = currentRisk * returnRate;
@@ -478,11 +481,11 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
 function findSurvivalMonth(params, returnsArray = null) {
   const { currentAge, maxMonths } = params;
-  const totalMonthsLimit = Math.min(maxMonths, (100 - currentAge) * 12);
+  const totalMonthsLimit = Math.min(maxMonths, (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR);
 
   let result = -1;
 
-  for (let m = 0; m <= totalMonthsLimit; m += 12) {
+  for (let m = 0; m <= totalMonthsLimit; m += MONTHS_PER_YEAR) {
     const res = _runCoreSimulation(params, { fireMonth: m, returnsArray });
     if (res.survived) {
       result = m;
@@ -515,13 +518,9 @@ export function performFireSimulation(inputParams, options = {}) {
   let targetReturns = returnsArray;
   if (!targetReturns) {
     const { currentAge, annualReturnRate } = params;
-    const totalMonthsUntil100 = (100 - currentAge) * 12;
+    const totalMonthsUntil100 = (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR;
     const monthlyReturnMean = Math.pow(1 + annualReturnRate, 1 / 12) - 1;
-
-    targetReturns = [];
-    for (let m = 0; m <= totalMonthsUntil100; m++) {
-      targetReturns.push(monthlyReturnMean);
-    }
+    targetReturns = createConstantReturnsArray(totalMonthsUntil100, monthlyReturnMean);
   }
 
   let fireMonth = forceFireMonth;
@@ -553,33 +552,29 @@ export function generateGrowthTable(params) {
 export function generateAnnualSimulation(params) {
   const { monthlyData, fireReachedMonth } = performFireSimulation(params, { recordMonthly: true });
   const yearlySummaries = [];
-  for (let y = 0; y < Math.ceil(monthlyData.length / 12); y++) {
-    const startIdx = y * 12;
-    const endIdx = Math.min(startIdx + 12, monthlyData.length);
+  for (let y = 0; y < Math.ceil(monthlyData.length / MONTHS_PER_YEAR); y++) {
+    const startIdx = y * MONTHS_PER_YEAR;
+    const endIdx = Math.min(startIdx + MONTHS_PER_YEAR, monthlyData.length);
     const slice = monthlyData.slice(startIdx, endIdx);
-    const income = slice.reduce((sum, m) => sum + m.income, 0);
-    const pension = slice.reduce((sum, m) => sum + m.pension, 0);
-    const expenses = slice.reduce((sum, m) => sum + m.expenses, 0);
-    const withdrawal = slice.reduce((sum, m) => sum + m.withdrawal, 0);
-    const gain = slice.reduce((sum, m) => sum + m.investmentGain, 0);
+
     const firstMonth = monthlyData[startIdx];
     const endMonth = monthlyData[endIdx - 1];
-    const endCash = monthlyData[endIdx - 1].cashAssets;
     const fireMonthInYear = fireReachedMonth >= startIdx && fireReachedMonth < endIdx
       ? fireReachedMonth
       : null;
+
     yearlySummaries.push({
       age: Math.floor(firstMonth.age),
-      income: Math.round(income),
-      pension: Math.round(pension),
-      expenses: Math.round(expenses),
-      withdrawal: Math.round(withdrawal),
-      investmentGain: Math.round(gain),
+      income: Math.round(sumByField(slice, "income")),
+      pension: Math.round(sumByField(slice, "pension")),
+      expenses: Math.round(sumByField(slice, "expenses")),
+      withdrawal: Math.round(sumByField(slice, "withdrawal")),
+      investmentGain: Math.round(sumByField(slice, "investmentGain")),
       assets: Math.round(firstMonth.assets),
       assetsYearEnd: Math.round(endMonth.assets),
       riskAssets: Math.round(firstMonth.riskAssets),
       cashAssets: Math.round(firstMonth.cashAssets),
-      savings: Math.round(endCash - firstMonth.cashAssets),
+      savings: Math.round(endMonth.cashAssets - firstMonth.cashAssets),
       fireMonthInYear,
     });
   }
@@ -611,7 +606,7 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
   const rand = createRandom(seed);
 
   const { currentAge, annualReturnRate } = params;
-  const totalMonths = (100 - currentAge) * 12;
+  const totalMonths = (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR;
 
   const mu = annualReturnRate;
   const sigma = safeAnnualVolatility;
@@ -625,7 +620,7 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
   const annualHistory = [];
   let successCount = 0;
 
-  const totalYears = Math.ceil(totalMonths / 12);
+  const totalYears = Math.ceil(totalMonths / MONTHS_PER_YEAR);
 
   for (let t = 0; t < safeTrials; t++) {
     const returnsArray = [];
@@ -646,7 +641,7 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
 
     const yearAssets = [];
     for (let y = 0; y <= totalYears; y++) {
-      const mIdx = y * 12;
+      const mIdx = y * MONTHS_PER_YEAR;
       if (mIdx < res.monthlyData.length) {
         yearAssets.push(res.monthlyData[mIdx].assets);
       } else {
@@ -657,16 +652,6 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
   }
 
   finalAssetsList.sort((a, b) => a - b);
-
-  const interpolatePercentile = (sortedValues, p) => {
-    if (sortedValues.length === 1) return sortedValues[0];
-    const pos = (p / 100) * (sortedValues.length - 1);
-    const lowerIndex = Math.floor(pos);
-    const upperIndex = Math.ceil(pos);
-    if (lowerIndex === upperIndex) return sortedValues[lowerIndex];
-    const weight = pos - lowerIndex;
-    return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * weight;
-  };
 
   const getPercentile = (p) => interpolatePercentile(finalAssetsList, p);
 
@@ -692,4 +677,83 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
     trials: safeTrials,
     fireReachedMonth: fireMonth
   };
+}
+
+function resolveDependentBirthDates({ dependentBirthDate, dependentBirthDates }) {
+  const fallbackDependentBirthDates = dependentBirthDate ? [dependentBirthDate] : [];
+  return (dependentBirthDates && dependentBirthDates.length > 0)
+    ? dependentBirthDates
+    : fallbackDependentBirthDates;
+}
+
+function precalculateExpenses({
+  simulationLimit,
+  monthlyExp,
+  monthlyInflationRate,
+  simulationStartDate,
+  mortgageMonthlyPayment,
+  mortgagePayoffDate,
+  lifestyleReductionFactor,
+  independenceMonthKeys,
+  householdChildrenCount,
+  postFireExtraExpense,
+}) {
+  const precalculatedBaseExpenses = [];
+  const precalculatedExtraExpenses = [];
+
+  for (let k = 0; k <= simulationLimit; k++) {
+    const curMonthlyExp = calculateCurrentMonthlyExpense({
+      baseMonthlyExpense: monthlyExp,
+      monthlyInflationRate,
+      monthIndex: k,
+      simulationStartDate,
+      mortgageMonthlyPayment,
+      mortgagePayoffDate,
+      lifestyleReductionFactor,
+      independenceMonthKeys,
+      householdChildrenCount,
+    });
+    const extraWithInf = postFireExtraExpense * Math.pow(1 + monthlyInflationRate, k);
+    precalculatedBaseExpenses.push(curMonthlyExp);
+    precalculatedExtraExpenses.push(extraWithInf);
+  }
+
+  return { precalculatedBaseExpenses, precalculatedExtraExpenses };
+}
+
+function withdrawFromRiskAssets({ neededNetAmount, currentRisk, currentCostBasis, includeTax, taxRate }) {
+  const gainRatio = currentRisk > 0 ? Math.max(0, (currentRisk - currentCostBasis) / currentRisk) : 0;
+  const taxDrag = includeTax ? gainRatio * taxRate : 0;
+  const netMultiplier = 1 - taxDrag;
+  const maxNetFromRisk = Math.max(0, currentRisk * netMultiplier);
+  const actualNetFromRisk = Math.min(neededNetAmount, maxNetFromRisk);
+  const grossFromRisk = actualNetFromRisk / netMultiplier;
+
+  const costBasisWithdrawn = grossFromRisk * (1 - gainRatio);
+  const nextCostBasis = Math.max(0, currentCostBasis - costBasisWithdrawn);
+  const nextRisk = Math.max(0, currentRisk - grossFromRisk);
+
+  return { actualNetFromRisk, grossFromRisk, nextCostBasis, nextRisk };
+}
+
+function createConstantReturnsArray(totalMonths, monthlyReturnMean) {
+  const targetReturns = [];
+  for (let m = 0; m <= totalMonths; m++) {
+    targetReturns.push(monthlyReturnMean);
+  }
+  return targetReturns;
+}
+
+function sumByField(items, field) {
+  return items.reduce((sum, item) => sum + item[field], 0);
+}
+
+function interpolatePercentile(sortedValues, p) {
+  if (sortedValues.length === 1) return sortedValues[0];
+  const pos = (p / 100) * (sortedValues.length - 1);
+  const lowerIndex = Math.floor(pos);
+  const upperIndex = Math.ceil(pos);
+  if (lowerIndex === upperIndex) return sortedValues[lowerIndex];
+  const weight = pos - lowerIndex;
+  return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * weight;
 }
