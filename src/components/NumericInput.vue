@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   id: {
@@ -25,6 +25,10 @@ const props = defineProps({
   class: {
     type: String,
     default: ''
+  },
+  modelModifiers: {
+    type: Object,
+    default: () => ({})
   }
 });
 
@@ -32,6 +36,7 @@ const emit = defineEmits(['update:modelValue', 'input']);
 
 const displayValue = ref('');
 const inputRef = ref(null);
+const lazyMode = computed(() => Boolean(props.modelModifiers?.lazy));
 
 const formatNumber = (val) => {
   if (val === null || val === undefined || isNaN(val)) return '';
@@ -59,7 +64,9 @@ const onInput = (e) => {
   const numericValue = parseNumber(originalValue);
   displayValue.value = formatNumber(numericValue);
 
-  emit('update:modelValue', numericValue);
+  if (!lazyMode.value) {
+    emit('update:modelValue', numericValue);
+  }
   emit('input', e);
 
   // Restore cursor position
@@ -72,13 +79,26 @@ const onInput = (e) => {
   }, 0);
 };
 
+const onBlur = () => {
+  if (!lazyMode.value) return;
+  emit('update:modelValue', parseNumber(displayValue.value));
+};
+
 const onKeydown = (e) => {
   if (e.key === 'ArrowUp') {
     e.preventDefault();
-    emit('update:modelValue', props.modelValue + props.step);
+    const nextValue = props.modelValue + props.step;
+    displayValue.value = formatNumber(nextValue);
+    if (!lazyMode.value) {
+      emit('update:modelValue', nextValue);
+    }
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
-    emit('update:modelValue', Math.max(0, props.modelValue - props.step));
+    const nextValue = Math.max(0, props.modelValue - props.step);
+    displayValue.value = formatNumber(nextValue);
+    if (!lazyMode.value) {
+      emit('update:modelValue', nextValue);
+    }
   }
 };
 </script>
@@ -90,6 +110,7 @@ const onKeydown = (e) => {
     type="text"
     v-model="displayValue"
     @input="onInput"
+    @blur="onBlur"
     @keydown="onKeydown"
     :disabled="disabled"
     :placeholder="placeholder"

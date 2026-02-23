@@ -1,4 +1,5 @@
 <script setup>
+import { ref, watch } from "vue";
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
 import NumericInput from "@/components/NumericInput.vue";
 
@@ -68,6 +69,20 @@ const {
   isAnnualBonusManual,
   isPostFireFirstYearExtraExpenseManual,
 } = useFireSimulatorViewModel();
+
+const simulationEndAgePreview = ref(simulationEndAge.value);
+
+watch(simulationEndAge, (newAge) => {
+  simulationEndAgePreview.value = newAge;
+});
+
+const onSimulationEndAgeInput = (event) => {
+  simulationEndAgePreview.value = Number(event.target.value);
+};
+
+const commitSimulationEndAge = () => {
+  simulationEndAge.value = simulationEndAgePreview.value;
+};
 </script>
 
 <template>
@@ -85,17 +100,17 @@ const {
         </div>
         <div class="filter-item">
           <label>生年月日 (本人)</label>
-          <input v-model="userBirthDate" type="date" />
+          <input v-model.lazy="userBirthDate" type="date" />
         </div>
         <div class="filter-item" v-if="householdType !== 'single'">
           <label>生年月日 (配偶者)</label>
-          <input v-model="spouseBirthDate" type="date" />
+          <input v-model.lazy="spouseBirthDate" type="date" />
         </div>
         <div class="filter-item" v-if="householdType === 'family'">
           <label>生年月日 (子)</label>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <div v-for="(birthDate, idx) in dependentBirthDates" :key="idx" style="display: flex; gap: 8px; align-items: center;">
-              <input v-model="dependentBirthDates[idx]" type="date" />
+              <input v-model.lazy="dependentBirthDates[idx]" type="date" />
               <button type="button" v-if="dependentBirthDates.length > 1" @click="removeDependentBirthDate(idx)">削除</button>
             </div>
             <button type="button" v-if="dependentBirthDates.length < 3" @click="addDependentBirthDate">子を追加</button>
@@ -103,11 +118,11 @@ const {
         </div>
         <div class="filter-item">
           <label for="risk-assets">初期リスク資産 (円)</label>
-          <NumericInput id="risk-assets" v-model="manualInitialRiskAssets" :step="1000000" />
+          <NumericInput id="risk-assets" v-model.lazy="manualInitialRiskAssets" :step="1000000" />
         </div>
         <div class="filter-item">
           <label for="cash-assets">初期現金資産 (円)</label>
-          <NumericInput id="cash-assets" v-model="manualInitialCashAssets" :step="1000000" />
+          <NumericInput id="cash-assets" v-model.lazy="manualInitialCashAssets" :step="1000000" />
         </div>
       </div>
 
@@ -116,23 +131,23 @@ const {
         <div class="fire-form-grid" style="margin-top: 10px;">
           <div class="filter-item">
             <label>年金開始年齢 (本人)</label>
-            <NumericInput v-model="pensionConfig.userStartAge" />
+            <NumericInput v-model.lazy="pensionConfig.userStartAge" />
           </div>
           <div class="filter-item" v-if="householdType !== 'single'">
             <label>配偶者年金開始 (本人年齢)</label>
-            <NumericInput v-model="pensionConfig.spouseUserAgeStart" />
+            <NumericInput v-model.lazy="pensionConfig.spouseUserAgeStart" />
           </div>
           <div class="filter-item">
             <label>厚生年金既発生額 (年額)</label>
-            <NumericInput v-model="pensionConfig.userKoseiAccruedAtDataAgeAnnualYen" :step="10000" />
+            <NumericInput v-model.lazy="pensionConfig.userKoseiAccruedAtDataAgeAnnualYen" :step="10000" />
           </div>
           <div class="filter-item">
             <label>今後の厚生年金増分 (年額/年)</label>
-            <NumericInput v-model="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" :step="1000" />
+            <NumericInput v-model.lazy="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" :step="1000" />
           </div>
           <div class="filter-item">
             <label>データ基準年 (本人年齢)</label>
-            <NumericInput v-model="pensionConfig.pensionDataAge" />
+            <NumericInput v-model.lazy="pensionConfig.pensionDataAge" />
           </div>
           <div class="filter-item" v-if="householdType !== 'single'" style="flex-direction: row; align-items: center; gap: 8px;">
              <input type="checkbox" v-model="pensionConfig.includeSpouse" id="includeSpouse" />
@@ -146,15 +161,15 @@ const {
         <div class="fire-form-grid" style="margin-top: 10px;">
           <div class="filter-item" v-if="householdType === 'family'">
             <label>子の独立年齢</label>
-            <input v-model.number="independenceAge" type="number" />
+            <input v-model.lazy.number="independenceAge" type="number" />
           </div>
           <div class="filter-item">
             <label>期待リターン (年率 %)</label>
-            <input v-model.number="annualReturnRate" type="number" step="0.1" class="is-public" />
+            <input v-model.lazy.number="annualReturnRate" type="number" step="0.1" class="is-public" />
           </div>
           <div class="filter-item">
             <label>取り崩し率 (%)</label>
-            <input v-model.number="withdrawalRate" type="number" step="0.1" class="is-public" />
+            <input v-model.lazy.number="withdrawalRate" type="number" step="0.1" class="is-public" />
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
@@ -165,21 +180,21 @@ const {
                 </label>
               </div>
             </div>
-            <NumericInput v-model="manualAnnualBonus" :step="10000" :disabled="!includeBonus" @input="isAnnualBonusManual = true" />
+            <NumericInput v-model.lazy="manualAnnualBonus" :step="10000" :disabled="!includeBonus" @input="isAnnualBonusManual = true" />
           </div>
           <div class="filter-item">
             <label>住宅ローン月額 (円)</label>
-            <NumericInput v-model="mortgageMonthlyPayment" :step="10000" />
+            <NumericInput v-model.lazy="mortgageMonthlyPayment" :step="10000" />
           </div>
           <div class="filter-item">
             <label>ローン完済年月</label>
-            <input v-model="mortgagePayoffDate" type="month" class="date-select" />
+            <input v-model.lazy="mortgagePayoffDate" type="month" class="date-select" />
           </div>
           <div class="filter-item">
             <label class="is-public">インフレ考慮</label>
             <div style="display: flex; gap: 8px; align-items: center;">
               <input type="checkbox" v-model="includeInflation" class="is-public" />
-              <input v-if="includeInflation" v-model.number="inflationRate" type="number" step="0.1" style="width: 60px;" class="is-public" />
+              <input v-if="includeInflation" v-model.lazy.number="inflationRate" type="number" step="0.1" style="width: 60px;" class="is-public" />
               <span v-if="includeInflation" class="is-public">%</span>
             </div>
           </div>
@@ -187,29 +202,29 @@ const {
             <label class="is-public">税金考慮</label>
             <div style="display: flex; gap: 8px; align-items: center;">
               <input type="checkbox" v-model="includeTax" class="is-public" />
-              <input v-if="includeTax" v-model.number="taxRate" type="number" step="0.1" style="width: 80px;" class="is-public" />
+              <input v-if="includeTax" v-model.lazy.number="taxRate" type="number" step="0.1" style="width: 80px;" class="is-public" />
               <span v-if="includeTax" class="is-public">%</span>
             </div>
           </div>
           <div class="filter-item">
             <label>FIRE後の社会保険料・税(月額)</label>
-            <NumericInput v-model="postFireExtraExpense" :step="5000" />
+            <NumericInput v-model.lazy="postFireExtraExpense" :step="5000" />
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
               <label>FIRE達成時の退職金 (円)</label>
             </div>
-            <NumericInput v-model="retirementLumpSumAtFire" :step="100000" />
+            <NumericInput v-model.lazy="retirementLumpSumAtFire" :step="100000" />
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
               <label>FIRE1年目の追加支出 (年額)</label>
             </div>
-            <NumericInput v-model="manualPostFireFirstYearExtraExpense" :step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
+            <NumericInput v-model.lazy="manualPostFireFirstYearExtraExpense" :step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
           </div>
           <div class="filter-item">
-            <label>資産寿命の目標年齢 ({{ simulationEndAge }}歳)</label>
-            <input v-model.number="simulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
+            <label>資産寿命の目標年齢 ({{ simulationEndAgePreview }}歳)</label>
+            <input :value="simulationEndAgePreview" @input="onSimulationEndAgeInput" @change="commitSimulationEndAge" @blur="commitSimulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
           </div>
         </div>
       </details>
@@ -218,19 +233,19 @@ const {
       <div class="fire-form-grid">
         <div class="filter-item">
           <label>毎月の投資額 (円)</label>
-          <NumericInput v-model="monthlyInvestment" :step="10000" />
+          <NumericInput v-model.lazy="monthlyInvestment" :step="10000" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>生活費 (月額)</label>
           </div>
-          <NumericInput v-model="manualMonthlyExpense" :step="10000" />
+          <NumericInput v-model.lazy="manualMonthlyExpense" :step="10000" />
         </div>
         <div class="filter-item expense-item">
           <div class="label-row">
             <label>定期収入 (月額)</label>
           </div>
-          <NumericInput v-model="manualRegularMonthlyIncome" :step="10000" />
+          <NumericInput v-model.lazy="manualRegularMonthlyIncome" :step="10000" />
         </div>
       </div>
 
@@ -244,15 +259,15 @@ const {
         <div v-if="useMonteCarlo" class="fire-form-grid">
           <div class="filter-item">
             <label>試行回数</label>
-            <input v-model.number="monteCarloTrials" type="number" step="100" min="100" max="10000" />
+            <input v-model.lazy.number="monteCarloTrials" type="number" step="100" min="100" max="10000" />
           </div>
           <div class="filter-item">
             <label>年率ボラティリティ (%)</label>
-            <input v-model.number="monteCarloVolatility" type="number" step="1" min="0" />
+            <input v-model.lazy.number="monteCarloVolatility" type="number" step="1" min="0" />
           </div>
           <div class="filter-item">
             <label>乱数シード (再現用)</label>
-            <input v-model.number="monteCarloSeed" type="number" />
+            <input v-model.lazy.number="monteCarloSeed" type="number" />
           </div>
         </div>
         <div v-if="useMonteCarlo" style="margin-top: 12px;">
@@ -451,6 +466,11 @@ const {
   background: var(--surface-elevated);
   color: var(--text);
   font: inherit;
+}
+
+.filter-item input::placeholder {
+  color: color-mix(in oklab, var(--muted), #ffffff 20%);
+  opacity: 0.5;
 }
 .label-row {
   display: flex;
