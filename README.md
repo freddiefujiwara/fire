@@ -17,7 +17,7 @@ This project provides a specialized, high-performance simulation tool to answer 
 ### 1.2 Goal
 The application provides a single, integrated FIRE simulation dashboard with the following capabilities:
 1. **Household-based Modeling**: Supports Single, Couple, and Family configurations with dynamic logic for spouse and dependents.
-2. **Monthly Cash Flow Engine**: Calculates asset growth, income, expenses, and withdrawals on a monthly basis until age 100.
+2. **Monthly Cash Flow Engine**: Calculates asset growth, income, expenses, and withdrawals on a monthly basis until a configurable simulation end age (default: 100).
 3. **Sequence Risk Evaluation**: Uses Monte Carlo simulations (1,000+ trials) to assess the probability of success under market volatility.
 4. **Shareable Scenarios**: Encodes the entire simulation state into a URL for easy sharing and saving without a backend database.
 
@@ -62,7 +62,7 @@ The application provides a single, integrated FIRE simulation dashboard with the
 The engine performs monthly calculations prioritizing cash withdrawals before selling risk assets.
 - **Investment Limits**: Monthly investment is automatically capped by available cash surplus to maintain liquidity.
 - **Tax Logic**: Tracks cost basis for risk assets. Capital gains tax is applied only to the gain portion during withdrawals.
-- **Required Assets**: Uses a backward-induction algorithm to calculate the minimum assets needed at the point of retirement to survive until age 100.
+- **Required Assets**: Uses a backward-induction algorithm to calculate the minimum assets needed at the point of retirement to survive until the configured simulation end age.
 
 ### 3.2 Household Logic
 - **Household Types**: Single, Couple, Family.

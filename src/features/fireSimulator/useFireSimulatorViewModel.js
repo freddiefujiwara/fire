@@ -62,6 +62,7 @@ export function useFireSimulatorViewModel() {
   const retirementLumpSumAtFire = ref(5000000);
   const withdrawalRate = ref(4);
   const includeBonus = ref(true);
+  const simulationEndAge = ref(100);
 
   const useMonteCarlo = ref(false);
   const monteCarloTrials = ref(1000);
@@ -112,6 +113,7 @@ export function useFireSimulatorViewModel() {
     mpffyeem: isPostFireFirstYearExtraExpenseManual,
     wr: withdrawalRate,
     ib: includeBonus,
+    sea: simulationEndAge,
     umc: useMonteCarlo,
     mct: monteCarloTrials,
     mcv: monteCarloVolatility,
@@ -255,6 +257,7 @@ export function useFireSimulatorViewModel() {
     dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],
     independenceAge: independenceAge.value,
     householdType: householdType.value,
+    simulationEndAge: simulationEndAge.value,
   }));
 
   const growthData = computed(() => generateGrowthTable(simulationParams.value));
@@ -344,6 +347,7 @@ export function useFireSimulatorViewModel() {
       pensionParticipationEndAge: pensionParticipationEndAge.value,
       pensionFutureYears: pensionFutureYears.value,
       pensionProjectedAnnual: pensionProjectedAnnual.value,
+      simulationEndAge: simulationEndAge.value,
     }),
   );
 
@@ -557,6 +561,7 @@ export function useFireSimulatorViewModel() {
     manualPostFireFirstYearExtraExpense,
     withdrawalRate,
     includeBonus,
+    simulationEndAge,
     useMonteCarlo,
     monteCarloTrials,
     monteCarloVolatility,

@@ -9,6 +9,7 @@ export {
 
 const MONTHS_PER_YEAR = 12;
 const SIMULATION_END_AGE = 100;
+const MIN_SIMULATION_END_AGE = 80;
 
 /**
  * Build readable explanation segments for the simulation result.
@@ -34,10 +35,11 @@ export function generateAlgorithmExplanationSegments(params) {
     pensionParticipationEndAge,
     pensionFutureYears,
     pensionProjectedAnnual,
+    simulationEndAge = SIMULATION_END_AGE,
   } = params;
 
   const segments = [
-    { type: "text", value: "本シミュレーションは、設定された期待リターン・インフレ率・年金・ローン等のキャッシュフローに基づき、100歳時点で資産が残る最短リタイア年齢を算出しています。\n・必要資産目安は「FIRE達成年齢で退職して100歳まで資産が尽きない最小条件」を満たす達成時点の金融資産額と同じ定義です。\n" },
+    { type: "text", value: `本シミュレーションは、設定された期待リターン・インフレ率・年金・ローン等のキャッシュフローに基づき、${simulationEndAge}歳時点で資産が残る最短リタイア年齢を算出しています。\n・必要資産目安は「FIRE達成年齢で退職して${simulationEndAge}歳まで資産が尽きない最小条件」を満たす達成時点の金融資産額と同じ定義です。\n` },
   ];
 
   const startAge = Number(pensionConfig?.userStartAge ?? 65);
@@ -295,13 +297,21 @@ function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24
 export function normalizeFireParams(params) {
   if (!params) return normalizeFireParams({});
   const monthlyExpense = params.monthlyExpense ?? (params.monthlyExpenses ? params.monthlyExpenses / 12 : 0);
+  const currentAge = Number(params.currentAge || 40);
+  const normalizedSimulationEndAge = Number(params.simulationEndAge ?? SIMULATION_END_AGE);
+  const minAllowedSimulationEndAge = Math.max(MIN_SIMULATION_END_AGE, Math.ceil(currentAge));
+  const simulationEndAge = Math.min(
+    SIMULATION_END_AGE,
+    Math.max(minAllowedSimulationEndAge, Number.isFinite(normalizedSimulationEndAge) ? normalizedSimulationEndAge : SIMULATION_END_AGE),
+  );
+
   return {
     initialAssets: Number(params.initialAssets ?? 0),
     riskAssets: Number(params.riskAssets ?? 0),
     annualReturnRate: Number(params.annualReturnRate ?? 0),
     monthlyExpense: Number(monthlyExpense),
     monthlyIncome: Number(params.monthlyIncome ?? 0),
-    currentAge: Number(params.currentAge || 40),
+    currentAge,
     includeInflation: Boolean(params.includeInflation),
     inflationRate: Number(params.inflationRate ?? 0.02),
     includeTax: Boolean(params.includeTax),
@@ -322,6 +332,7 @@ export function normalizeFireParams(params) {
       : (params.dependentBirthDate ? [params.dependentBirthDate] : []),
     independenceAge: params.independenceAge || 24,
     householdType: params.householdType || "single",
+    simulationEndAge,
   };
 }
 
@@ -357,12 +368,13 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     dependentBirthDates,
     independenceAge,
     householdType,
+    simulationEndAge = SIMULATION_END_AGE,
   } = params;
 
   const monthlyExp = monthlyExpense;
   const monthlyReturnMean = Math.pow(1 + annualReturnRate, 1 / 12) - 1;
   const monthlyInflationRate = Math.pow(1 + (includeInflation ? inflationRate : 0), 1 / 12) - 1;
-  const totalMonthsUntil100 = (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR;
+  const totalMonthsUntilEndAge = (simulationEndAge - currentAge) * MONTHS_PER_YEAR;
   const simulationStartDate = new Date();
   const effectiveDependentBirthDates = resolveDependentBirthDates({ dependentBirthDate, dependentBirthDates });
   const independenceMonthKeys = getIndependenceMonthKeys(effectiveDependentBirthDates, independenceAge);
@@ -374,7 +386,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
   let fireReachedMonth = fireMonth;
   const monthlyData = recordMonthly ? [] : null;
 
-  const simulationLimit = totalMonthsUntil100;
+  const simulationLimit = totalMonthsUntilEndAge;
   const lifestyleReductionFactor = householdType === "family" ? 0.8 : 1.0;
 
   const { precalculatedBaseExpenses, precalculatedExtraExpenses } = precalculateExpenses({
@@ -392,7 +404,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
   for (let m = 0; m <= simulationLimit; m++) {
     const ageAtMonthM = currentAge + m / 12;
-    const remainingMonths = Math.max(0, totalMonthsUntil100 - m);
+    const remainingMonths = Math.max(0, totalMonthsUntilEndAge - m);
 
     if (m === fireReachedMonth) {
       currentCash += retirementLumpSumAtFire;
@@ -406,7 +418,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     const assets = Math.max(0, currentCash + currentRisk);
 
     const isFire = fireReachedMonth !== -1 && m >= fireReachedMonth;
-    const fireAgeAtMonthM = fireReachedMonth === -1 ? (currentAge + 100) : currentAge + fireReachedMonth / 12;
+    const fireAgeAtMonthM = fireReachedMonth === -1 ? simulationEndAge : currentAge + fireReachedMonth / 12;
     const curPension = includePension ? calculateMonthlyPension(ageAtMonthM, fireAgeAtMonthM, pensionConfig) : 0;
 
     const monthlyIncomeVal = isFire ? 0 : monthlyIncome;
@@ -446,7 +458,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       });
     }
 
-    if (m === totalMonthsUntil100) break;
+    if (m === totalMonthsUntilEndAge) break;
 
     let monthlyWithdrawal = 0;
     let monthlyInvest = 0;
@@ -525,8 +537,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
  * @returns {number} Earliest safe FIRE month, or -1 when none found.
  */
 function findSurvivalMonth(params, returnsArray = null) {
-  const { currentAge, maxMonths } = params;
-  const totalMonthsLimit = Math.min(maxMonths, (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR);
+  const { currentAge, maxMonths, simulationEndAge } = params;
+  const totalMonthsLimit = Math.min(maxMonths, (simulationEndAge - currentAge) * MONTHS_PER_YEAR);
 
   let result = -1;
 
@@ -568,10 +580,10 @@ export function performFireSimulation(inputParams, options = {}) {
 
   let targetReturns = returnsArray;
   if (!targetReturns) {
-    const { currentAge, annualReturnRate } = params;
-    const totalMonthsUntil100 = (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR;
+    const { currentAge, annualReturnRate, simulationEndAge } = params;
+    const totalMonthsUntilEndAge = (simulationEndAge - currentAge) * MONTHS_PER_YEAR;
     const monthlyReturnMean = Math.pow(1 + annualReturnRate, 1 / 12) - 1;
-    targetReturns = createConstantReturnsArray(totalMonthsUntil100, monthlyReturnMean);
+    targetReturns = createConstantReturnsArray(totalMonthsUntilEndAge, monthlyReturnMean);
   }
 
   let fireMonth = forceFireMonth;
@@ -682,8 +694,8 @@ export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVola
   const safeAnnualVolatility = Math.max(0, Number.isFinite(annualVolatility) ? annualVolatility : 0);
   const rand = createRandom(seed);
 
-  const { currentAge, annualReturnRate } = params;
-  const totalMonths = (SIMULATION_END_AGE - currentAge) * MONTHS_PER_YEAR;
+  const { currentAge, annualReturnRate, simulationEndAge } = params;
+  const totalMonths = (simulationEndAge - currentAge) * MONTHS_PER_YEAR;
 
   const mu = annualReturnRate;
   const sigma = safeAnnualVolatility;
