@@ -1,4 +1,5 @@
 <script setup>
+import { ref, watch } from "vue";
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
 import NumericInput from "@/components/NumericInput.vue";
 
@@ -68,6 +69,20 @@ const {
   isAnnualBonusManual,
   isPostFireFirstYearExtraExpenseManual,
 } = useFireSimulatorViewModel();
+
+const simulationEndAgePreview = ref(simulationEndAge.value);
+
+watch(simulationEndAge, (newAge) => {
+  simulationEndAgePreview.value = newAge;
+});
+
+const onSimulationEndAgeInput = (event) => {
+  simulationEndAgePreview.value = Number(event.target.value);
+};
+
+const commitSimulationEndAge = () => {
+  simulationEndAge.value = simulationEndAgePreview.value;
+};
 </script>
 
 <template>
@@ -208,8 +223,8 @@ const {
             <NumericInput v-model.lazy="manualPostFireFirstYearExtraExpense" :step="100000" @input="isPostFireFirstYearExtraExpenseManual = true" />
           </div>
           <div class="filter-item">
-            <label>資産寿命の目標年齢 ({{ simulationEndAge }}歳)</label>
-            <input v-model.number="simulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
+            <label>資産寿命の目標年齢 ({{ simulationEndAgePreview }}歳)</label>
+            <input :value="simulationEndAgePreview" @input="onSimulationEndAgeInput" @change="commitSimulationEndAge" @blur="commitSimulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
           </div>
         </div>
       </details>
