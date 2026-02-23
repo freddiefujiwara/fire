@@ -50,7 +50,7 @@ describe("App integration", () => {
       },
     });
 
-    expect(wrapper.text()).toContain("FIRE Simulator");
+    expect(wrapper.text()).toContain("FIRE シミュレータ");
     expect(wrapper.text()).toContain("fire-view");
   });
 

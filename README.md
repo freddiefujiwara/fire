@@ -1,4 +1,4 @@
-# FIRE Simulator - Technical Specification
+# FIRE シミュレータ - Technical Specification
 URL: https://freddiefujiwara.com/fire
 
 ## 1. Project Overview
