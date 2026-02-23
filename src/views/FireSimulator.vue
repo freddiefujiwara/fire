@@ -209,7 +209,7 @@ const {
           </div>
           <div class="filter-item">
             <label>資産寿命の目標年齢 ({{ simulationEndAge }}歳)</label>
-            <input v-model.lazy.number="simulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
+            <input v-model.number="simulationEndAge" type="range" min="80" max="100" step="1" class="is-public" />
           </div>
         </div>
       </details>
