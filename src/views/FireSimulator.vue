@@ -25,6 +25,7 @@ const {
   monteCarloTrials,
   monteCarloVolatility,
   monteCarloSeed,
+  monteCarloTargetSuccessRate,
   initialAssets,
   riskAssets,
   cashAssets,
@@ -269,6 +270,10 @@ const commitSimulationEndAge = () => {
             <label>乱数シード (再現用)</label>
             <input v-model.lazy.number="monteCarloSeed" type="number" />
           </div>
+          <div class="filter-item">
+            <label>目標FIRE成功率 (%)</label>
+            <input v-model.lazy.number="monteCarloTargetSuccessRate" type="number" step="1" min="1" max="99" />
+          </div>
         </div>
         <div v-if="useMonteCarlo" style="margin-top: 12px;">
           <button
@@ -375,11 +380,12 @@ const commitSimulationEndAge = () => {
 
     <div v-if="useMonteCarlo && monteCarloResults" class="card-grid monte-carlo-results">
       <article class="card highlight">
-        <h2>FIRE成功率 ({{ simulationEndAge }}歳生存)</h2>
-        <p :class="monteCarloResults.successRate > 0.9 ? 'is-positive' : monteCarloResults.successRate > 0.5 ? 'is-warning' : 'is-negative'">
-          {{ (monteCarloResults.successRate * 100).toFixed(1) }}%
+        <h2>逆算FIRE年齢 ({{ simulationEndAge }}歳生存)</h2>
+        <p v-if="monteCarloResults.recommendedFireAge !== null" class="is-positive">
+          {{ monteCarloResults.recommendedFireAge }}歳
         </p>
-        <p class="meta">{{ monteCarloResults.trials }}回の試行結果</p>
+        <p v-else class="is-negative">条件内で達成不可</p>
+        <p class="meta">目標成功率 {{ (monteCarloResults.targetSuccessRate * 100).toFixed(0) }}% 以上 / {{ monteCarloResults.trials }}回の試行結果</p>
       </article>
       <article class="card">
         <h2>最終資産・中央値 (P50)</h2>

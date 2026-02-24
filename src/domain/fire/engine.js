@@ -683,12 +683,12 @@ function nextGaussian(rand) {
 /**
  * Run many simulations with random returns and report percentile outcomes.
  * @param {object} inputParams - Raw simulation settings.
- * @param {{trials?: number, annualVolatility?: number, seed?: number}} [options={}] - Monte Carlo controls.
+ * @param {{trials?: number, annualVolatility?: number, seed?: number, forceFireMonth?: number|null}} [options={}] - Monte Carlo controls.
  * @returns {{successRate: number, p10: number, p50: number, p90: number, p10Path: number[], p50Path: number[], p90Path: number[], trials: number, fireReachedMonth: number}} Monte Carlo summary values.
  */
-export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVolatility = 0.15, seed = 123 } = {}) {
+export function runMonteCarloSimulation(inputParams, { trials = 1000, annualVolatility = 0.15, seed = 123, forceFireMonth = null } = {}) {
   const params = normalizeFireParams(inputParams);
-  const detResult = performFireSimulation(params);
+  const detResult = performFireSimulation(params, { forceFireMonth });
   const fireMonth = detResult.fireReachedMonth;
   const safeTrials = Math.max(1, Math.floor(Number(trials) || 0));
   const safeAnnualVolatility = Math.max(0, Number.isFinite(annualVolatility) ? annualVolatility : 0);

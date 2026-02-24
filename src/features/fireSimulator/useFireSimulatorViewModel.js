@@ -72,6 +72,7 @@ export function useFireSimulatorViewModel() {
   const monteCarloTrials = ref(1000);
   const monteCarloVolatility = ref(15);
   const monteCarloSeed = ref(123);
+  const monteCarloTargetSuccessRate = ref(80);
 
   const initialAssets = computed(() => manualInitialRiskAssets.value + manualInitialCashAssets.value);
   const riskAssets = computed(() => manualInitialRiskAssets.value);
@@ -120,6 +121,7 @@ export function useFireSimulatorViewModel() {
     mct: monteCarloTrials,
     mcv: monteCarloVolatility,
     mcs: monteCarloSeed,
+    mctsr: monteCarloTargetSuccessRate,
     mme: manualMonthlyExpense,
     mrmi: manualRegularMonthlyIncome,
     mab: manualAnnualBonus,
@@ -163,6 +165,7 @@ export function useFireSimulatorViewModel() {
     mct: 1000,
     mcv: 15,
     mcs: 123,
+    mctsr: 80,
     mme: 300000,
     mrmi: 400000,
     mab: 1000000,
@@ -442,11 +445,62 @@ export function useFireSimulatorViewModel() {
     }
     isCalculatingMonteCarlo.value = true;
     setTimeout(() => {
-      monteCarloResults.value = runMonteCarloSimulation(simulationParams.value, {
+      const targetRate = Math.min(0.99, Math.max(0.01, (Number(monteCarloTargetSuccessRate.value) || 0) / 100));
+      const totalMonths = Math.max(0, Math.floor((simulationEndAge.value - currentAge.value) * 12));
+      const simOptions = {
         trials: monteCarloTrials.value,
         annualVolatility: monteCarloVolatility.value / 100,
         seed: monteCarloSeed.value,
+      };
+
+      const evaluateAtMonth = (month) => runMonteCarloSimulation(simulationParams.value, {
+        ...simOptions,
+        forceFireMonth: month,
       });
+
+      let recommendedMonth = totalMonths;
+      let recommendedResult = evaluateAtMonth(recommendedMonth);
+
+      if (recommendedResult.successRate < targetRate) {
+        recommendedMonth = -1;
+      } else {
+        const immediateResult = evaluateAtMonth(0);
+        if (immediateResult.successRate >= targetRate) {
+          recommendedMonth = 0;
+          recommendedResult = immediateResult;
+        } else {
+          let low = 0;
+          let high = totalMonths;
+          while (low < high) {
+            const mid = Math.floor((low + high) / 2);
+            const midResult = evaluateAtMonth(mid);
+            if (midResult.successRate >= targetRate) {
+              high = mid;
+              recommendedResult = midResult;
+            } else {
+              low = mid + 1;
+            }
+          }
+          recommendedMonth = low;
+          recommendedResult = evaluateAtMonth(recommendedMonth);
+        }
+      }
+
+      if (recommendedMonth === -1) {
+        monteCarloResults.value = {
+          ...recommendedResult,
+          targetSuccessRate: targetRate,
+          recommendedFireMonth: -1,
+          recommendedFireAge: null,
+        };
+      } else {
+        monteCarloResults.value = {
+          ...recommendedResult,
+          targetSuccessRate: targetRate,
+          recommendedFireMonth: recommendedMonth,
+          recommendedFireAge: Math.floor(currentAge.value + recommendedMonth / 12),
+        };
+      }
       isCalculatingMonteCarlo.value = false;
     }, 10);
   };
@@ -640,6 +694,7 @@ export function useFireSimulatorViewModel() {
     monteCarloTrials,
     monteCarloVolatility,
     monteCarloSeed,
+    monteCarloTargetSuccessRate,
     initialAssets,
     riskAssets,
     cashAssets,
