@@ -115,6 +115,38 @@ describe("useFireSimulatorViewModel", () => {
     expect(callArgs.params.p).toBeDefined();
   });
 
+  it("persists monteCarloTargetSuccessRate in the compressed URL state", async () => {
+    const replaceMock = vi.fn();
+    vi.spyOn(vueRouter, "useRouter").mockReturnValue({
+      replace: replaceMock,
+    });
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: {},
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    vm.monteCarloTargetSuccessRate.value = 85;
+    await nextTick();
+
+    const callArgs = replaceMock.mock.calls[0][0];
+    const { decode } = await import("@/domain/fire/url");
+    expect(decode(callArgs.params.p).mctsr).toBe(85);
+  });
+
+  it("restores monteCarloTargetSuccessRate from the compressed URL state", async () => {
+    const { encode } = await import("@/domain/fire/url");
+    const encoded = encode({ mctsr: 92 });
+
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: { p: encoded },
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    expect(vm.monteCarloTargetSuccessRate.value).toBe(92);
+  });
+
 
   it("supports multiple dependent birth dates and legacy dbd URL", async () => {
     const { encode } = await import("@/domain/fire/url");
