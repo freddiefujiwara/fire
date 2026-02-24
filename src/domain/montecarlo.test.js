@@ -92,6 +92,18 @@ describe("Monte Carlo Simulation", () => {
     expect(monteCarlo.fireReachedMonth).toBe(deterministic.fireReachedMonth);
   });
 
+  it("accepts forceFireMonth and uses it for Monte Carlo runs", () => {
+    const forcedMonth = 24;
+    const monteCarlo = runMonteCarloSimulation(baseParams, {
+      trials: 30,
+      annualVolatility: 0.12,
+      seed: 123,
+      forceFireMonth: forcedMonth,
+    });
+
+    expect(monteCarlo.fireReachedMonth).toBe(forcedMonth);
+  });
+
   it("sanitizes invalid trial count to a minimum of 1", () => {
     const result = runMonteCarloSimulation(baseParams, {
       trials: 0,
