@@ -13,7 +13,7 @@ import {
   generateAnnualSimulation,
   calculateMonthlyPension,
   runMonteCarloSimulation,
-  findWithdrawalRateForMedianDepletion,
+  findFireMonthForMedianDepletion,
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
   calculateStartAgeAdjustmentRate,
@@ -487,16 +487,13 @@ export function useFireSimulatorViewModel() {
         }
       }
 
-      const terminalDepletionPlan = recommendedMonth === -1
-        ? null
-        : findWithdrawalRateForMedianDepletion(simulationParams.value, {
-          ...simOptions,
-          forceFireMonth: recommendedMonth,
-          targetTerminalAssets: 0,
-          toleranceYen: 500000,
-          minWithdrawalRate: 0,
-          maxWithdrawalRate: 0.2,
-        });
+      const terminalDepletionPlan = findFireMonthForMedianDepletion(simulationParams.value, {
+        ...simOptions,
+        targetTerminalAssets: 0,
+        toleranceYen: 500000,
+        minFireMonth: 0,
+        maxFireMonth: totalMonths,
+      });
 
       if (recommendedMonth === -1) {
         monteCarloResults.value = {
@@ -539,6 +536,8 @@ export function useFireSimulatorViewModel() {
     requiredAssetsAtFireYen: requiredAssetsAtFire.value,
     fireAchievementMonth: fireAchievementMonth.value,
     fireAchievementAge: fireAchievementAge.value,
+    currentAge: currentAge.value,
+    simulationEndAge: simulationEndAge.value,
     mortgagePayoffDate: mortgagePayoffDate.value || null,
     expectedAnnualReturnRatePercent: annualReturnRate.value,
     includeInflation: includeInflation.value,
