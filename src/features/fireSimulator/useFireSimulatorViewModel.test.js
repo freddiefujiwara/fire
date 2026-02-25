@@ -9,7 +9,7 @@ vi.mock("@/domain/fire", async (importOriginal) => {
     generateGrowthTable: () => ({ fireReachedMonth: 12, table: [{ month: 12, assets: 777 }] }),
     generateAnnualSimulation: () => [{ age: 40, income: 10, pension: 2, expenses: 3, investmentGain: 4, withdrawal: 5, assets: 6, cashAssets: 7, riskAssets: 8 }],
     runMonteCarloSimulation: () => ({ successRate: 0.5, p10: 1, p50: 2, p90: 3, trials: 100 }),
-    findWithdrawalRateForMedianDepletion: () => ({ recommendedWithdrawalRate: 0.05, p50TerminalAssets: 10000, successRate: 0.8, iterations: 6, boundaryHit: null, evaluation: {} }),
+    findFireMonthForMedianDepletion: () => ({ recommendedFireMonth: 60, p50TerminalAssets: 10000, successRate: 0.8, iterations: 6, boundaryHit: null, evaluation: {} }),
     generateAlgorithmExplanationSegments: () => [{ value: "abc" }],
   };
 });
@@ -176,15 +176,29 @@ describe("useFireSimulatorViewModel", () => {
 
     vm.useMonteCarlo.value = true;
     vm.monteCarloTargetSuccessRate.value = 40;
-    vm.runMonteCarlo();
-    vi.runAllTimers();
+    const runPromise = vm.runMonteCarlo();
+    await vi.runAllTimersAsync();
+    await runPromise;
     expect(vm.monteCarloResults.value.successRate).toBe(0.5);
-    expect(vm.monteCarloResults.value.terminalDepletionPlan?.recommendedWithdrawalRate).toBe(0.05);
+    expect(vm.monteCarloResults.value.terminalDepletionPlan?.recommendedFireMonth).toBe(60);
 
     vm.useMonteCarlo.value = false;
     vm.runMonteCarlo();
     await nextTick();
     expect(vm.monteCarloResults.value).toBeNull();
+  });
+
+
+  it("includes terminal depletion guide fields in copied conditions JSON", async () => {
+    const vm = useFireSimulatorViewModel();
+    vm.useMonteCarlo.value = true;
+    const runPromise = vm.runMonteCarlo();
+    await vi.runAllTimersAsync();
+    await runPromise;
+
+    const payload = JSON.parse(vm.copyConditionsAndAlgorithm());
+    expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireMonth).toBe(60);
+    expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireAge).toBeDefined();
   });
 
   it("automatically updates bonus and extra expense when regular income changes unless manual flag is set", async () => {

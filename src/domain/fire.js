@@ -9,4 +9,5 @@ export {
   generateAnnualSimulation,
   runMonteCarloSimulation,
   findWithdrawalRateForMedianDepletion,
+  findFireMonthForMedianDepletion,
 } from "./fire/engine";

@@ -87,7 +87,15 @@ export function buildConditionsAndAlgorithmJson({
     requiredAssetsAtFireYen,
     fireAchievementMonth,
     fireAchievementAge: fireAchievementAgeFromConditions,
+    currentAge,
+    simulationEndAge,
   } = conditions;
+
+  const terminalDepletionPlan = monteCarloResults?.terminalDepletionPlan || null;
+  const recommendedFireMonth = terminalDepletionPlan?.recommendedFireMonth ?? null;
+  const recommendedFireAge = recommendedFireMonth === null || currentAge === undefined
+    ? null
+    : Math.floor(currentAge + recommendedFireMonth / 12);
 
   const monteCarloSimulation = monteCarloResults
     ? {
@@ -101,6 +109,16 @@ export function buildConditionsAndAlgorithmJson({
           p50Yen: monteCarloResults.p50,
           p90Yen: monteCarloResults.p90,
         },
+        terminalDepletionGuide: terminalDepletionPlan
+          ? {
+              simulationEndAge,
+              recommendedFireMonth,
+              recommendedFireAge,
+              p50TerminalAssetsYen: terminalDepletionPlan.p50TerminalAssets,
+              successRatePercent: Number((terminalDepletionPlan.successRate * 100).toFixed(1)),
+              boundaryHit: terminalDepletionPlan.boundaryHit,
+            }
+          : null,
       }
     : {
         enabled: false,
@@ -109,6 +127,7 @@ export function buildConditionsAndAlgorithmJson({
         seed: monteCarloSeed,
         successRatePercent: null,
         terminalAssetsPercentilesYen: null,
+        terminalDepletionGuide: null,
       };
 
   return {
