@@ -866,6 +866,107 @@ export function findWithdrawalRateForMedianDepletion(
 }
 
 /**
+ * Search a FIRE timing that brings median terminal assets close to target.
+ * @param {object} inputParams - Raw simulation settings.
+ * @param {{trials?: number, annualVolatility?: number, seed?: number, targetTerminalAssets?: number, toleranceYen?: number, minFireMonth?: number, maxFireMonth?: number, maxIterations?: number}} [options={}] - Search and Monte Carlo controls.
+ * @returns {{recommendedFireMonth: number, p50TerminalAssets: number, successRate: number, iterations: number, boundaryHit: "low"|"high"|null, evaluation: object}} Search result summary.
+ */
+export function findFireMonthForMedianDepletion(
+  inputParams,
+  {
+    trials = 1000,
+    annualVolatility = 0.15,
+    seed = 123,
+    targetTerminalAssets = 0,
+    toleranceYen = 100000,
+    minFireMonth = 0,
+    maxFireMonth = null,
+    maxIterations = 18,
+  } = {},
+) {
+  const params = normalizeFireParams(inputParams);
+  const totalMonths = Math.max(0, Math.floor((params.simulationEndAge - params.currentAge) * MONTHS_PER_YEAR));
+
+  const lowerBound = Math.max(0, Math.floor(Number(minFireMonth) || 0));
+  const upperBound = Math.min(
+    totalMonths,
+    Math.max(lowerBound, Math.floor(Number(maxFireMonth ?? totalMonths) || totalMonths)),
+  );
+
+  const evaluate = (fireMonth) => runMonteCarloSimulation(
+    params,
+    { trials, annualVolatility, seed, forceFireMonth: fireMonth },
+  );
+
+  const lowEval = evaluate(lowerBound);
+  if (lowEval.p50 >= targetTerminalAssets - toleranceYen) {
+    return {
+      recommendedFireMonth: lowerBound,
+      p50TerminalAssets: lowEval.p50,
+      successRate: lowEval.successRate,
+      iterations: 1,
+      boundaryHit: "low",
+      evaluation: lowEval,
+    };
+  }
+
+  const highEval = evaluate(upperBound);
+  if (highEval.p50 < targetTerminalAssets - toleranceYen) {
+    return {
+      recommendedFireMonth: upperBound,
+      p50TerminalAssets: highEval.p50,
+      successRate: highEval.successRate,
+      iterations: 2,
+      boundaryHit: "high",
+      evaluation: highEval,
+    };
+  }
+
+  let low = lowerBound;
+  let high = upperBound;
+  let bestEval = highEval;
+  let bestMonth = upperBound;
+  let iterations = 2;
+
+  for (let i = 0; i < maxIterations; i++) {
+    const mid = Math.floor((low + high) / 2);
+    const midEval = evaluate(mid);
+    iterations += 1;
+
+    if (Math.abs(midEval.p50 - targetTerminalAssets) < Math.abs(bestEval.p50 - targetTerminalAssets)) {
+      bestEval = midEval;
+      bestMonth = mid;
+    }
+
+    if (Math.abs(midEval.p50 - targetTerminalAssets) <= toleranceYen) {
+      return {
+        recommendedFireMonth: mid,
+        p50TerminalAssets: midEval.p50,
+        successRate: midEval.successRate,
+        iterations,
+        boundaryHit: null,
+        evaluation: midEval,
+      };
+    }
+
+    if (midEval.p50 >= targetTerminalAssets) {
+      high = mid;
+    } else {
+      low = mid + 1;
+    }
+  }
+
+  return {
+    recommendedFireMonth: bestMonth,
+    p50TerminalAssets: bestEval.p50,
+    successRate: bestEval.successRate,
+    iterations,
+    boundaryHit: null,
+    evaluation: bestEval,
+  };
+}
+
+/**
  * Choose the effective dependent birth date list from old and new inputs.
  * @param {{dependentBirthDate: string|null, dependentBirthDates: string[]}} params - Dependent birth date inputs.
  * @returns {string[]} Effective dependent birth date list.

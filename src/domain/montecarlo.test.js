@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { performFireSimulation, runMonteCarloSimulation, findWithdrawalRateForMedianDepletion } from "./fire";
+import { performFireSimulation, runMonteCarloSimulation, findWithdrawalRateForMedianDepletion, findFireMonthForMedianDepletion } from "./fire";
 
 describe("Monte Carlo Simulation", () => {
   const baseParams = {
@@ -168,6 +168,46 @@ describe("Monte Carlo Simulation", () => {
     expect(tuned.recommendedWithdrawalRate).toBeGreaterThanOrEqual(0.01);
     expect(tuned.recommendedWithdrawalRate).toBeLessThanOrEqual(0.2);
     expect(Math.abs(tuned.p50TerminalAssets)).toBeLessThanOrEqual(Math.abs(baseline.p50));
+  });
+
+
+  it("finds a FIRE timing that moves median terminal assets toward zero", () => {
+    const baseline = runMonteCarloSimulation(baseParams, {
+      trials: 60,
+      annualVolatility: 0.15,
+      seed: 99,
+      forceFireMonth: 0,
+    });
+
+    const tuned = findFireMonthForMedianDepletion(baseParams, {
+      trials: 60,
+      annualVolatility: 0.15,
+      seed: 99,
+      toleranceYen: 200000,
+    });
+
+    expect(tuned.recommendedFireMonth).toBeGreaterThanOrEqual(0);
+    expect(Math.abs(tuned.p50TerminalAssets)).toBeLessThanOrEqual(Math.abs(baseline.p50));
+  });
+
+  it("returns a boundary hint when earliest FIRE timing already leaves surplus median assets", () => {
+    const conservative = findFireMonthForMedianDepletion({
+      ...baseParams,
+      initialAssets: 50000000,
+      riskAssets: 20000000,
+      monthlyExpense: 50000,
+      monthlyIncome: 0,
+      annualReturnRate: 0.08,
+      retirementLumpSumAtFire: 10000000,
+    }, {
+      trials: 20,
+      annualVolatility: 0,
+      seed: 7,
+      toleranceYen: 1,
+    });
+
+    expect(conservative.boundaryHit).toBe("low");
+    expect(conservative.recommendedFireMonth).toBe(0);
   });
 
   it("returns a boundary hint when no tested withdrawal can deplete median assets", () => {
