@@ -404,6 +404,20 @@ const commitSimulationEndAge = () => {
         <p class="amount-value">{{ formatYen(monteCarloResults.p90) }}</p>
         <p class="meta">好調な市場が続いた場合</p>
       </article>
+      <article class="card" v-if="monteCarloResults.terminalDepletionPlan">
+        <h2>P50で{{ simulationEndAge }}歳に使い切るFIRE年齢</h2>
+        <p class="amount-value">{{ monteCarloResults.terminalDepletionPlan.recommendedFireAge }}歳</p>
+        <p class="meta">
+          P50最終資産: {{ formatYen(monteCarloResults.terminalDepletionPlan.p50TerminalAssets) }}
+          / 成功率 {{ (monteCarloResults.terminalDepletionPlan.successRate * 100).toFixed(1) }}%
+        </p>
+        <p class="meta" v-if="monteCarloResults.terminalDepletionPlan.boundaryHit === 'low'">
+          ※ 今すぐFIREしてもP50残高が残るため、取り崩し率・支出・目標年齢の見直しが必要です。
+        </p>
+        <p class="meta" v-if="monteCarloResults.terminalDepletionPlan.boundaryHit === 'high'">
+          ※ 目標年齢まで働いてもP50で資産不足になるため、FIRE条件の見直しが必要です。
+        </p>
+      </article>
     </div>
 
     <div class="card-grid">

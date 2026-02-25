@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { performFireSimulation, runMonteCarloSimulation } from "./fire";
+import { performFireSimulation, runMonteCarloSimulation, findFireMonthForMedianDepletion } from "./fire";
 
 describe("Monte Carlo Simulation", () => {
   const baseParams = {
@@ -147,6 +147,49 @@ describe("Monte Carlo Simulation", () => {
     });
     // Should fallback to 0 volatility
     expect(res.p50).toBeDefined();
+  });
+
+  it("finds a FIRE month that moves median terminal assets toward zero", () => {
+    const immediate = runMonteCarloSimulation(baseParams, {
+      trials: 60,
+      annualVolatility: 0.15,
+      seed: 99,
+      forceFireMonth: 0,
+    });
+
+    const totalMonths = Math.max(0, Math.floor((100 - baseParams.currentAge) * 12));
+    const tuned = findFireMonthForMedianDepletion(baseParams, {
+      trials: 60,
+      annualVolatility: 0.15,
+      seed: 99,
+      toleranceYen: 200000,
+      minFireMonth: 0,
+      maxFireMonth: totalMonths,
+    });
+
+    expect(tuned.recommendedFireMonth).toBeGreaterThanOrEqual(0);
+    expect(tuned.recommendedFireMonth).toBeLessThanOrEqual(totalMonths);
+    expect(Math.abs(tuned.p50TerminalAssets)).toBeLessThanOrEqual(Math.abs(immediate.p50));
+  });
+
+  it("returns a boundary hint when immediate FIRE still leaves median surplus", () => {
+    const conservative = findFireMonthForMedianDepletion({
+      ...baseParams,
+      monthlyExpense: 1,
+      monthlyIncome: 0,
+      annualReturnRate: 0.08,
+      withdrawalRate: 0,
+    }, {
+      trials: 20,
+      annualVolatility: 0,
+      seed: 7,
+      minFireMonth: 0,
+      maxFireMonth: 120,
+      toleranceYen: 1,
+    });
+
+    expect(conservative.boundaryHit).toBe("low");
+    expect(conservative.recommendedFireMonth).toBe(0);
   });
 
 });
