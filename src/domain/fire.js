@@ -8,4 +8,5 @@ export {
   generateGrowthTable,
   generateAnnualSimulation,
   runMonteCarloSimulation,
+  findWithdrawalRateForMedianDepletion,
 } from "./fire/engine";
