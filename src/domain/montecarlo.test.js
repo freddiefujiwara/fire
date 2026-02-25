@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { performFireSimulation, runMonteCarloSimulation } from "./fire";
+import { performFireSimulation, runMonteCarloSimulation, findWithdrawalRateForMedianDepletion } from "./fire";
 
 describe("Monte Carlo Simulation", () => {
   const baseParams = {
@@ -147,6 +147,46 @@ describe("Monte Carlo Simulation", () => {
     });
     // Should fallback to 0 volatility
     expect(res.p50).toBeDefined();
+  });
+
+  it("finds a withdrawal rate that moves median terminal assets toward zero", () => {
+    const baseline = runMonteCarloSimulation(baseParams, {
+      trials: 60,
+      annualVolatility: 0.15,
+      seed: 99,
+    });
+
+    const tuned = findWithdrawalRateForMedianDepletion(baseParams, {
+      trials: 60,
+      annualVolatility: 0.15,
+      seed: 99,
+      toleranceYen: 200000,
+      minWithdrawalRate: 0.01,
+      maxWithdrawalRate: 0.2,
+    });
+
+    expect(tuned.recommendedWithdrawalRate).toBeGreaterThanOrEqual(0.01);
+    expect(tuned.recommendedWithdrawalRate).toBeLessThanOrEqual(0.2);
+    expect(Math.abs(tuned.p50TerminalAssets)).toBeLessThanOrEqual(Math.abs(baseline.p50));
+  });
+
+  it("returns a boundary hint when no tested withdrawal can deplete median assets", () => {
+    const conservative = findWithdrawalRateForMedianDepletion({
+      ...baseParams,
+      monthlyExpense: 1,
+      monthlyIncome: 0,
+      annualReturnRate: 0.08,
+    }, {
+      trials: 20,
+      annualVolatility: 0,
+      seed: 7,
+      minWithdrawalRate: 0,
+      maxWithdrawalRate: 0.03,
+      toleranceYen: 1,
+    });
+
+    expect(conservative.boundaryHit).toBe("high");
+    expect(conservative.recommendedWithdrawalRate).toBeCloseTo(0.03, 6);
   });
 
 });

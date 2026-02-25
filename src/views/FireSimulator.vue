@@ -404,6 +404,21 @@ const commitSimulationEndAge = () => {
         <p class="amount-value">{{ formatYen(monteCarloResults.p90) }}</p>
         <p class="meta">好調な市場が続いた場合</p>
       </article>
+      <article class="card" v-if="monteCarloResults.terminalDepletionPlan">
+        <h2>P50の最終残高を0円に近づける目安</h2>
+        <p class="amount-value">{{ (monteCarloResults.terminalDepletionPlan.recommendedWithdrawalRate * 100).toFixed(2) }}%</p>
+        <p class="meta">
+          この取崩し率で試算した場合の{{ simulationEndAge }}歳時点P50残高: {{ formatYen(monteCarloResults.terminalDepletionPlan.p50TerminalAssets) }}
+        </p>
+        <p class="meta">
+          そのときの成功率: {{ (monteCarloResults.terminalDepletionPlan.successRate * 100).toFixed(1) }}%
+          （= {{ simulationEndAge }}歳まで資産がマイナスにならない割合）
+        </p>
+        <p class="meta" v-if="monteCarloResults.terminalDepletionPlan.boundaryHit === 'high'">
+          ※ 今回の上限取崩し率まで試しても、P50残高を0円付近にできませんでした。
+          期待リターン・支出・目標年齢もあわせて調整してください。
+        </p>
+      </article>
     </div>
 
     <div class="card-grid">
