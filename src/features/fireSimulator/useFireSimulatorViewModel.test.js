@@ -2,6 +2,36 @@ import { nextTick } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as vueRouter from "vue-router";
 
+vi.mock("./monteCarlo.worker.js?worker", () => {
+  return {
+    default: class MockWorker {
+      constructor() {
+        this.onmessage = null;
+        this.onerror = null;
+      }
+      postMessage() {
+        setTimeout(() => {
+          if (this.onmessage) {
+            this.onmessage({
+              data: {
+                type: "success",
+                result: {
+                  successRate: 0.5,
+                  p10: 1,
+                  p50: 2,
+                  p90: 3,
+                  terminalDepletionPlan: { recommendedFireMonth: 60 },
+                },
+              },
+            });
+          }
+        }, 0);
+      }
+      terminate() {}
+    },
+  };
+});
+
 vi.mock("@/domain/fire", async (importOriginal) => {
   const actual = await importOriginal();
   return {
@@ -177,7 +207,7 @@ describe("useFireSimulatorViewModel", () => {
     vm.useMonteCarlo.value = true;
     vm.monteCarloTargetSuccessRate.value = 40;
     vm.runMonteCarlo();
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
     expect(vm.monteCarloResults.value.successRate).toBe(0.5);
     expect(vm.monteCarloResults.value.terminalDepletionPlan?.recommendedFireMonth).toBe(60);
 
@@ -188,11 +218,11 @@ describe("useFireSimulatorViewModel", () => {
   });
 
 
-  it("includes terminal depletion guide fields in copied conditions JSON", () => {
+  it("includes terminal depletion guide fields in copied conditions JSON", async () => {
     const vm = useFireSimulatorViewModel();
     vm.useMonteCarlo.value = true;
     vm.runMonteCarlo();
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
 
     const payload = JSON.parse(vm.copyConditionsAndAlgorithm());
     expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireMonth).toBe(60);
