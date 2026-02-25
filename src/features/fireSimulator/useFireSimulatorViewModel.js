@@ -13,7 +13,7 @@ import {
   generateAnnualSimulation,
   calculateMonthlyPension,
   runMonteCarloSimulation,
-  findWithdrawalRateForMedianDepletion,
+  findFireMonthForMedianDepletion,
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
   calculateStartAgeAdjustmentRate,
@@ -433,19 +433,32 @@ export function useFireSimulatorViewModel() {
   const algorithmExplanationFull = computed(() => algorithmExplanationSegments.value.map((seg) => seg.value).join(""));
 
   const isCalculatingMonteCarlo = ref(false);
+  let monteCarloRunToken = 0;
 
   /**
    * Run Monte Carlo simulation when enabled and store the result.
    * @param {void} _unused - This function does not take input.
-   * @returns {void} Nothing is returned.
+   * @returns {Promise<void>} Resolves after the simulation workflow finishes.
    */
-  const runMonteCarlo = () => {
+  const runMonteCarlo = async () => {
     if (!useMonteCarlo.value) {
       monteCarloResults.value = null;
       return;
     }
+
+    const runToken = ++monteCarloRunToken;
+    const yieldToUi = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const evaluateAtMonth = async (month, simOptions) => {
+      await yieldToUi();
+      return runMonteCarloSimulation(simulationParams.value, {
+        ...simOptions,
+        forceFireMonth: month,
+      });
+    };
+
     isCalculatingMonteCarlo.value = true;
-    setTimeout(() => {
+
+    try {
       const targetRate = Math.min(0.99, Math.max(0.01, (Number(monteCarloTargetSuccessRate.value) || 0) / 100));
       const totalMonths = Math.max(0, Math.floor((simulationEndAge.value - currentAge.value) * 12));
       const simOptions = {
@@ -454,18 +467,13 @@ export function useFireSimulatorViewModel() {
         seed: monteCarloSeed.value,
       };
 
-      const evaluateAtMonth = (month) => runMonteCarloSimulation(simulationParams.value, {
-        ...simOptions,
-        forceFireMonth: month,
-      });
-
       let recommendedMonth = totalMonths;
-      let recommendedResult = evaluateAtMonth(recommendedMonth);
+      let recommendedResult = await evaluateAtMonth(recommendedMonth, simOptions);
 
       if (recommendedResult.successRate < targetRate) {
         recommendedMonth = -1;
       } else {
-        const immediateResult = evaluateAtMonth(0);
+        const immediateResult = await evaluateAtMonth(0, simOptions);
         if (immediateResult.successRate >= targetRate) {
           recommendedMonth = 0;
           recommendedResult = immediateResult;
@@ -474,7 +482,7 @@ export function useFireSimulatorViewModel() {
           let high = totalMonths;
           while (low < high) {
             const mid = Math.floor((low + high) / 2);
-            const midResult = evaluateAtMonth(mid);
+            const midResult = await evaluateAtMonth(mid, simOptions);
             if (midResult.successRate >= targetRate) {
               high = mid;
               recommendedResult = midResult;
@@ -483,20 +491,20 @@ export function useFireSimulatorViewModel() {
             }
           }
           recommendedMonth = low;
-          recommendedResult = evaluateAtMonth(recommendedMonth);
+          recommendedResult = await evaluateAtMonth(recommendedMonth, simOptions);
         }
       }
 
-      const terminalDepletionPlan = recommendedMonth === -1
-        ? null
-        : findWithdrawalRateForMedianDepletion(simulationParams.value, {
-          ...simOptions,
-          forceFireMonth: recommendedMonth,
-          targetTerminalAssets: 0,
-          toleranceYen: 500000,
-          minWithdrawalRate: 0,
-          maxWithdrawalRate: 0.2,
-        });
+      await yieldToUi();
+      const terminalDepletionPlan = findFireMonthForMedianDepletion(simulationParams.value, {
+        ...simOptions,
+        targetTerminalAssets: 0,
+        toleranceYen: 500000,
+        minFireMonth: 0,
+        maxFireMonth: totalMonths,
+      });
+
+      if (runToken !== monteCarloRunToken) return;
 
       if (recommendedMonth === -1) {
         monteCarloResults.value = {
@@ -515,8 +523,11 @@ export function useFireSimulatorViewModel() {
           terminalDepletionPlan,
         };
       }
-      isCalculatingMonteCarlo.value = false;
-    }, 10);
+    } finally {
+      if (runToken === monteCarloRunToken) {
+        isCalculatingMonteCarlo.value = false;
+      }
+    }
   };
 
   watch(useMonteCarlo, (val) => {
@@ -539,6 +550,8 @@ export function useFireSimulatorViewModel() {
     requiredAssetsAtFireYen: requiredAssetsAtFire.value,
     fireAchievementMonth: fireAchievementMonth.value,
     fireAchievementAge: fireAchievementAge.value,
+    currentAge: currentAge.value,
+    simulationEndAge: simulationEndAge.value,
     mortgagePayoffDate: mortgagePayoffDate.value || null,
     expectedAnnualReturnRatePercent: annualReturnRate.value,
     includeInflation: includeInflation.value,
