@@ -810,7 +810,7 @@ export function findWithdrawalRateForMedianDepletion(
   }
 
   const highEval = evaluate(upperBound);
-  if (highEval.p50 > targetTerminalAssets - toleranceYen) {
+  if (highEval.p50 > targetTerminalAssets + toleranceYen) {
     return {
       recommendedWithdrawalRate: upperBound,
       p50TerminalAssets: highEval.p50,
