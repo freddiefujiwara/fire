@@ -13,6 +13,7 @@ import {
   generateAnnualSimulation,
   calculateMonthlyPension,
   runMonteCarloSimulation,
+  findFireMonthForMedianDepletion,
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
   calculateStartAgeAdjustmentRate,
@@ -486,12 +487,21 @@ export function useFireSimulatorViewModel() {
         }
       }
 
+      const terminalDepletionPlan = findFireMonthForMedianDepletion(simulationParams.value, {
+        ...simOptions,
+        targetTerminalAssets: 0,
+        toleranceYen: 500000,
+        minFireMonth: 0,
+        maxFireMonth: totalMonths,
+      });
+
       if (recommendedMonth === -1) {
         monteCarloResults.value = {
           ...recommendedResult,
           targetSuccessRate: targetRate,
           recommendedFireMonth: -1,
           recommendedFireAge: null,
+          terminalDepletionPlan,
         };
       } else {
         monteCarloResults.value = {
@@ -499,6 +509,7 @@ export function useFireSimulatorViewModel() {
           targetSuccessRate: targetRate,
           recommendedFireMonth: recommendedMonth,
           recommendedFireAge: Math.floor(currentAge.value + recommendedMonth / 12),
+          terminalDepletionPlan,
         };
       }
       isCalculatingMonteCarlo.value = false;
