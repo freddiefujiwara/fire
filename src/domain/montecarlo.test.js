@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { performFireSimulation, runMonteCarloSimulation, findWithdrawalRateForMedianDepletion, findFireMonthForMedianDepletion } from "./fire";
+import { performFireSimulation, runMonteCarloSimulation, findWithdrawalRateForMedianDepletion, findFireMonthForMedianDepletion, runFullMonteCarloAnalysis } from "./fire";
 
 describe("Monte Carlo Simulation", () => {
   const baseParams = {
@@ -227,6 +227,43 @@ describe("Monte Carlo Simulation", () => {
 
     expect(conservative.boundaryHit).toBe("high");
     expect(conservative.recommendedWithdrawalRate).toBeCloseTo(0.03, 6);
+  });
+
+  describe("runFullMonteCarloAnalysis", () => {
+    it("runs successfully and returns expected structure", () => {
+      const results = runFullMonteCarloAnalysis(baseParams, {
+        trials: 50,
+        annualVolatility: 0.15,
+        seed: 123,
+        targetSuccessRate: 0.8,
+        simulationEndAge: 100,
+        currentAge: 40,
+      });
+
+      expect(results.successRate).toBeDefined();
+      expect(results.p10).toBeDefined();
+      expect(results.p50).toBeDefined();
+      expect(results.p90).toBeDefined();
+      expect(results.recommendedFireMonth).toBeDefined();
+      expect(results.terminalDepletionPlan).toBeDefined();
+      expect(results.targetSuccessRate).toBe(0.8);
+    });
+
+    it("finds a recommended FIRE month that meets or exceeds target success rate if possible", () => {
+      const targetRate = 0.9;
+      const results = runFullMonteCarloAnalysis(baseParams, {
+        trials: 50,
+        annualVolatility: 0.1,
+        seed: 42,
+        targetSuccessRate: targetRate,
+        simulationEndAge: 100,
+        currentAge: 40,
+      });
+
+      if (results.recommendedFireMonth !== -1) {
+        expect(results.successRate).toBeGreaterThanOrEqual(targetRate);
+      }
+    });
   });
 
 });
