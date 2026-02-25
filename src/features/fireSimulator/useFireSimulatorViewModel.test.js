@@ -187,6 +187,18 @@ describe("useFireSimulatorViewModel", () => {
     expect(vm.monteCarloResults.value).toBeNull();
   });
 
+
+  it("includes terminal depletion guide fields in copied conditions JSON", () => {
+    const vm = useFireSimulatorViewModel();
+    vm.useMonteCarlo.value = true;
+    vm.runMonteCarlo();
+    vi.runAllTimers();
+
+    const payload = JSON.parse(vm.copyConditionsAndAlgorithm());
+    expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireMonth).toBe(60);
+    expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireAge).toBeDefined();
+  });
+
   it("automatically updates bonus and extra expense when regular income changes unless manual flag is set", async () => {
     const vm = useFireSimulatorViewModel();
     vm.manualRegularMonthlyIncome.value = 500000;

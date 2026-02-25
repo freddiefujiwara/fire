@@ -536,6 +536,8 @@ export function useFireSimulatorViewModel() {
     requiredAssetsAtFireYen: requiredAssetsAtFire.value,
     fireAchievementMonth: fireAchievementMonth.value,
     fireAchievementAge: fireAchievementAge.value,
+    currentAge: currentAge.value,
+    simulationEndAge: simulationEndAge.value,
     mortgagePayoffDate: mortgagePayoffDate.value || null,
     expectedAnnualReturnRatePercent: annualReturnRate.value,
     includeInflation: includeInflation.value,

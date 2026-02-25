@@ -61,13 +61,27 @@ describe("fireSimulator formatters", () => {
         requiredAssetsAtFireYen: 3000,
         fireAchievementMonth: 100,
         fireAchievementAge: 45,
+        currentAge: 40,
+        simulationEndAge: 100,
         pensionConfig: {
           basicFullAnnualYen: 816000,
           spouseUserAgeStart: 62,
           includeSpouse: true,
         },
       },
-      monteCarloResults: { successRate: 0.51, p10: 1, p50: 2, p90: 3, trials: 1000 },
+      monteCarloResults: {
+        successRate: 0.51,
+        p10: 1,
+        p50: 2,
+        p90: 3,
+        trials: 1000,
+        terminalDepletionPlan: {
+          recommendedFireMonth: 192,
+          p50TerminalAssets: -849071,
+          successRate: 0.499,
+          boundaryHit: null,
+        },
+      },
       monteCarloVolatility: 18,
       monteCarloSeed: 42,
       estimatedMonthlyPensionAt60: 100,
@@ -81,6 +95,14 @@ describe("fireSimulator formatters", () => {
     expect(result.simulationInputs.householdProfile.spouseBirthDate).toBe("1992-02-02");
     expect(result.keyResults.fireTarget.fireAchievementAge).toBe(45);
     expect(result.monteCarloSimulation.terminalAssetsPercentilesYen.p50Yen).toBe(2);
+    expect(result.monteCarloSimulation.terminalDepletionGuide).toEqual({
+      simulationEndAge: 100,
+      recommendedFireMonth: 192,
+      recommendedFireAge: 56,
+      p50TerminalAssetsYen: -849071,
+      successRatePercent: 49.9,
+      boundaryHit: null,
+    });
     expect(result.keyResults.pensionEstimates.householdAnnualAtPensionEstimateAgeYen).toBe(1200);
     expect(result.keyResults.pensionEstimates.spouseBasicMonthlyEquivalentYen).toBe(68000);
     expect(result.keyResults.pensionEstimates.spouseBasicMonthlyAtPensionEstimateAgeYen).toBe(68000);
