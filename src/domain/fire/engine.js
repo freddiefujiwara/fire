@@ -866,6 +866,81 @@ export function findWithdrawalRateForMedianDepletion(
 }
 
 /**
+ * Run a full Monte Carlo analysis including target success rate search and median depletion search.
+ * @param {object} inputParams - Raw simulation settings.
+ * @param {object} options - Analysis options (trials, annualVolatility, seed, targetSuccessRate, simulationEndAge, currentAge).
+ * @returns {object} Analysis results.
+ */
+export function runFullMonteCarloAnalysis(inputParams, options) {
+  const params = normalizeFireParams(inputParams);
+  const {
+    trials = 1000,
+    annualVolatility = 0.15,
+    seed = 123,
+    targetSuccessRate = 0.8,
+    simulationEndAge = 100,
+    currentAge = 40,
+  } = options;
+
+  const targetRate = Math.min(0.99, Math.max(0.01, targetSuccessRate));
+  const totalMonths = Math.max(0, Math.floor((simulationEndAge - currentAge) * 12));
+  const simOptions = {
+    trials,
+    annualVolatility,
+    seed,
+  };
+
+  const evaluateAtMonth = (month) => runMonteCarloSimulation(params, {
+    ...simOptions,
+    forceFireMonth: month,
+  });
+
+  let recommendedMonth = totalMonths;
+  let recommendedResult = evaluateAtMonth(recommendedMonth);
+
+  if (recommendedResult.successRate < targetRate) {
+    recommendedMonth = -1;
+  } else {
+    const immediateResult = evaluateAtMonth(0);
+    if (immediateResult.successRate >= targetRate) {
+      recommendedMonth = 0;
+      recommendedResult = immediateResult;
+    } else {
+      let low = 0;
+      let high = totalMonths;
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        const midResult = evaluateAtMonth(mid);
+        if (midResult.successRate >= targetRate) {
+          high = mid;
+          recommendedResult = midResult;
+        } else {
+          low = mid + 1;
+        }
+      }
+      recommendedMonth = low;
+      recommendedResult = evaluateAtMonth(recommendedMonth);
+    }
+  }
+
+  const terminalDepletionPlan = findFireMonthForMedianDepletion(params, {
+    ...simOptions,
+    targetTerminalAssets: 0,
+    toleranceYen: 500000,
+    minFireMonth: 0,
+    maxFireMonth: totalMonths,
+  });
+
+  return {
+    ...recommendedResult,
+    targetSuccessRate: targetRate,
+    recommendedFireMonth: recommendedMonth,
+    recommendedFireAge: recommendedMonth === -1 ? null : Math.floor(currentAge + recommendedMonth / 12),
+    terminalDepletionPlan,
+  };
+}
+
+/**
  * Search a FIRE timing that brings median terminal assets close to target.
  * @param {object} inputParams - Raw simulation settings.
  * @param {{trials?: number, annualVolatility?: number, seed?: number, targetTerminalAssets?: number, toleranceYen?: number, minFireMonth?: number, maxFireMonth?: number, maxIterations?: number}} [options={}] - Search and Monte Carlo controls.

@@ -12,12 +12,12 @@ import {
   generateGrowthTable,
   generateAnnualSimulation,
   calculateMonthlyPension,
-  runMonteCarloSimulation,
-  findFireMonthForMedianDepletion,
+  runFullMonteCarloAnalysis,
   generateAlgorithmExplanationSegments,
   DEFAULT_PENSION_CONFIG,
   calculateStartAgeAdjustmentRate,
 } from "@/domain/fire";
+import MonteCarloWorker from "./monteCarlo.worker?worker";
 import { encode, decode } from "@/domain/fire/url";
 import FireSimulationTable from "@/components/FireSimulationTable.vue";
 import FireSimulationChart from "@/components/FireSimulationChart.vue";
@@ -433,6 +433,7 @@ export function useFireSimulatorViewModel() {
   const algorithmExplanationFull = computed(() => algorithmExplanationSegments.value.map((seg) => seg.value).join(""));
 
   const isCalculatingMonteCarlo = ref(false);
+  let worker = null;
 
   /**
    * Run Monte Carlo simulation when enabled and store the result.
@@ -444,76 +445,47 @@ export function useFireSimulatorViewModel() {
       monteCarloResults.value = null;
       return;
     }
+
+    if (worker) {
+      worker.terminate();
+    }
+
     isCalculatingMonteCarlo.value = true;
-    setTimeout(() => {
-      const targetRate = Math.min(0.99, Math.max(0.01, (Number(monteCarloTargetSuccessRate.value) || 0) / 100));
-      const totalMonths = Math.max(0, Math.floor((simulationEndAge.value - currentAge.value) * 12));
-      const simOptions = {
-        trials: monteCarloTrials.value,
-        annualVolatility: monteCarloVolatility.value / 100,
-        seed: monteCarloSeed.value,
-      };
+    worker = new MonteCarloWorker();
 
-      const evaluateAtMonth = (month) => runMonteCarloSimulation(simulationParams.value, {
-        ...simOptions,
-        forceFireMonth: month,
-      });
-
-      let recommendedMonth = totalMonths;
-      let recommendedResult = evaluateAtMonth(recommendedMonth);
-
-      if (recommendedResult.successRate < targetRate) {
-        recommendedMonth = -1;
+    worker.onmessage = (e) => {
+      if (e.data.type === "success") {
+        monteCarloResults.value = e.data.result;
       } else {
-        const immediateResult = evaluateAtMonth(0);
-        if (immediateResult.successRate >= targetRate) {
-          recommendedMonth = 0;
-          recommendedResult = immediateResult;
-        } else {
-          let low = 0;
-          let high = totalMonths;
-          while (low < high) {
-            const mid = Math.floor((low + high) / 2);
-            const midResult = evaluateAtMonth(mid);
-            if (midResult.successRate >= targetRate) {
-              high = mid;
-              recommendedResult = midResult;
-            } else {
-              low = mid + 1;
-            }
-          }
-          recommendedMonth = low;
-          recommendedResult = evaluateAtMonth(recommendedMonth);
-        }
-      }
-
-      const terminalDepletionPlan = findFireMonthForMedianDepletion(simulationParams.value, {
-        ...simOptions,
-        targetTerminalAssets: 0,
-        toleranceYen: 500000,
-        minFireMonth: 0,
-        maxFireMonth: totalMonths,
-      });
-
-      if (recommendedMonth === -1) {
-        monteCarloResults.value = {
-          ...recommendedResult,
-          targetSuccessRate: targetRate,
-          recommendedFireMonth: -1,
-          recommendedFireAge: null,
-          terminalDepletionPlan,
-        };
-      } else {
-        monteCarloResults.value = {
-          ...recommendedResult,
-          targetSuccessRate: targetRate,
-          recommendedFireMonth: recommendedMonth,
-          recommendedFireAge: Math.floor(currentAge.value + recommendedMonth / 12),
-          terminalDepletionPlan,
-        };
+        console.error("Monte Carlo Worker Error:", e.data.error);
       }
       isCalculatingMonteCarlo.value = false;
-    }, 10);
+      worker.terminate();
+      worker = null;
+    };
+
+    worker.onerror = (err) => {
+      console.error("Monte Carlo Worker Fatal Error:", err);
+      isCalculatingMonteCarlo.value = false;
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+    };
+
+    const options = {
+      trials: monteCarloTrials.value,
+      annualVolatility: monteCarloVolatility.value / 100,
+      seed: monteCarloSeed.value,
+      targetSuccessRate: (Number(monteCarloTargetSuccessRate.value) || 0) / 100,
+      simulationEndAge: simulationEndAge.value,
+      currentAge: currentAge.value,
+    };
+
+    worker.postMessage({
+      simulationParams: JSON.parse(JSON.stringify(simulationParams.value)),
+      options,
+    });
   };
 
   watch(useMonteCarlo, (val) => {

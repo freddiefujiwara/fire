@@ -10,4 +10,5 @@ export {
   runMonteCarloSimulation,
   findWithdrawalRateForMedianDepletion,
   findFireMonthForMedianDepletion,
+  runFullMonteCarloAnalysis,
 } from "./fire/engine";
