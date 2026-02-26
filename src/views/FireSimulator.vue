@@ -339,6 +339,14 @@ const commitBasicReduction = () => {
           <summary>条件の確認</summary>
           <div class="initial-summary-grid">
             <div>
+            <div>
+              <span class="meta">初期リスク資産 (入力値):</span>
+              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(manualInitialRiskAssets) }}</span>
+            </div>
+            <div>
+              <span class="meta">初期現金資産 (入力値):</span>
+              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(manualInitialCashAssets) }}</span>
+            </div>
               <span class="meta">総金融資産:</span>
               <span class="amount-value" style="margin-left: 8px;">{{ formatYen(initialAssets) }}</span>
             </div>
@@ -369,6 +377,10 @@ const commitBasicReduction = () => {
               <span class="amount-value" style="margin-left: 8px;">{{ formatYen(annualSavings) }}</span>
             </div>
             <div>
+            <div>
+              <span class="meta">ボーナス (入力値):</span>
+              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(manualAnnualBonus) }}</span>
+            </div>
               <span class="meta">うちボーナス:</span>
               <span class="amount-value" style="margin-left: 8px;">{{ formatYen(annualBonus) }}</span>
             </div>
