@@ -157,6 +157,10 @@ const commitMonteCarloTargetSuccessRate = () => {
             <NumericInput v-model.lazy="pensionConfig.userKoseiAccruedAtDataAgeAnnualYen" :step="10000" />
           </div>
           <div class="filter-item">
+            <label>基礎年金反映率</label>
+            <input v-model.lazy.number="pensionConfig.basicReduction" type="number" step="0.01" min="0" max="2" />
+          </div>
+          <div class="filter-item">
             <label>今後の厚生年金増分 (年額/年)</label>
             <NumericInput v-model.lazy="pensionConfig.userKoseiFutureFactorAnnualYenPerYear" :step="1000" />
           </div>

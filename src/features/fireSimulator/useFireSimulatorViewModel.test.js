@@ -179,9 +179,9 @@ describe("useFireSimulatorViewModel", () => {
   });
 
 
-  it("supports multiple dependent birth dates and legacy dbd URL", async () => {
+  it("supports multiple dependent birth dates", async () => {
     const { encode } = await import("@/domain/fire/url");
-    const encoded = encode({ dbd: "2018-01-01" });
+    const encoded = encode({ dbds: ["2018-01-01"] });
 
     vi.spyOn(vueRouter, "useRoute").mockReturnValue({
       params: { p: encoded },
