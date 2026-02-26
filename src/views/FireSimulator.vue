@@ -84,6 +84,20 @@ const onSimulationEndAgeInput = (event) => {
 const commitSimulationEndAge = () => {
   simulationEndAge.value = simulationEndAgePreview.value;
 };
+
+const monteCarloTargetSuccessRatePreview = ref(monteCarloTargetSuccessRate.value);
+
+watch(monteCarloTargetSuccessRate, (newRate) => {
+  monteCarloTargetSuccessRatePreview.value = newRate;
+});
+
+const onMonteCarloTargetSuccessRateInput = (event) => {
+  monteCarloTargetSuccessRatePreview.value = Number(event.target.value);
+};
+
+const commitMonteCarloTargetSuccessRate = () => {
+  monteCarloTargetSuccessRate.value = monteCarloTargetSuccessRatePreview.value;
+};
 </script>
 
 <template>
@@ -271,14 +285,14 @@ const commitSimulationEndAge = () => {
             <input v-model.lazy.number="monteCarloSeed" type="number" />
           </div>
           <div class="filter-item">
-            <label>目標FIRE成功率 (%)</label>
-            <input v-model.lazy.number="monteCarloTargetSuccessRate" type="number" step="1" min="1" max="99" />
+            <label>目標FIRE成功率 ({{ monteCarloTargetSuccessRatePreview }}%)</label>
+            <input :value="monteCarloTargetSuccessRatePreview" @input="onMonteCarloTargetSuccessRateInput" @change="commitMonteCarloTargetSuccessRate" @blur="commitMonteCarloTargetSuccessRate" type="range" min="1" max="99" step="1" class="is-public" />
           </div>
         </div>
-        <div v-if="useMonteCarlo" style="margin-top: 12px;">
+        <div v-if="useMonteCarlo" class="monte-carlo-actions">
           <button
             @click="runMonteCarlo"
-            class="calculate-btn"
+            class="pill-btn"
             :disabled="isCalculatingMonteCarlo"
           >
             {{ isCalculatingMonteCarlo ? '⚡ 計算中...' : '🎲 モンテカルロ試行を実行' }}
@@ -605,24 +619,9 @@ const commitSimulationEndAge = () => {
   margin-bottom: -10px;
 }
 
-.calculate-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100%;
-  transition: opacity 0.2s;
-}
-
-.calculate-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.calculate-btn:hover:not(:disabled) {
-  opacity: 0.9;
+.monte-carlo-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 </style>

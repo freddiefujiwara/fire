@@ -10,6 +10,7 @@
   --border: #334155;
   --link: #93c5fd;
   --link-active: #ffffff;
+  --primary: #3b82f6;
   --error: #fca5a5;
 }
 
@@ -22,6 +23,7 @@
   --border: #e2e8f0;
   --link: #1d4ed8;
   --link-active: #0f172a;
+  --primary: #2563eb;
   --error: #b91c1c;
 }
 
@@ -372,7 +374,7 @@ td {
 }
 
 .balance-net-worth {
-  background: color-mix(in oklab, #3b82f6 22%, var(--surface-elevated));
+  background: color-mix(in oklab, var(--primary) 22%, var(--surface-elevated));
 }
 
 .chart-grid {
