@@ -87,6 +87,8 @@ const commitSimulationEndAge = () => {
 
 const monteCarloTargetSuccessRatePreview = ref(monteCarloTargetSuccessRate.value);
 
+const basicReductionPreview = ref(Math.round((pensionConfig.value.basicReduction ?? 1) * 100));
+
 watch(monteCarloTargetSuccessRate, (newRate) => {
   monteCarloTargetSuccessRatePreview.value = newRate;
 });
@@ -97,6 +99,21 @@ const onMonteCarloTargetSuccessRateInput = (event) => {
 
 const commitMonteCarloTargetSuccessRate = () => {
   monteCarloTargetSuccessRate.value = monteCarloTargetSuccessRatePreview.value;
+};
+
+watch(
+  () => pensionConfig.value.basicReduction,
+  (newBasicReduction) => {
+    basicReductionPreview.value = Math.round((newBasicReduction ?? 1) * 100);
+  },
+);
+
+const onBasicReductionInput = (event) => {
+  basicReductionPreview.value = Number(event.target.value);
+};
+
+const commitBasicReduction = () => {
+  pensionConfig.value.basicReduction = basicReductionPreview.value / 100;
 };
 </script>
 
@@ -157,8 +174,19 @@ const commitMonteCarloTargetSuccessRate = () => {
             <NumericInput v-model.lazy="pensionConfig.userKoseiAccruedAtDataAgeAnnualYen" :step="10000" />
           </div>
           <div class="filter-item">
-            <label>基礎年金反映率</label>
-            <input v-model.lazy.number="pensionConfig.basicReduction" type="number" step="0.01" min="0" max="2" />
+            <label>基礎年金反映率 ({{ basicReductionPreview }}%)</label>
+            <input
+              :value="basicReductionPreview"
+              @input="onBasicReductionInput"
+              @change="commitBasicReduction"
+              @blur="commitBasicReduction"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              class="is-public"
+            />
+            <small class="meta">基礎年金反映率(未納期間がある場合等に設定してください)</small>
           </div>
           <div class="filter-item">
             <label>今後の厚生年金増分 (年額/年)</label>
