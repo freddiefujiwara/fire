@@ -159,7 +159,7 @@ const commitBasicReduction = () => {
       </div>
 
       <details style="margin-top: 10px;">
-        <summary style="font-size: 0.8rem; cursor: pointer; color: var(--muted);">年金設定の詳細</summary>
+        <summary style="font-size: 0.8rem; cursor: pointer; color: var(--muted);">詳細設定</summary>
         <div class="fire-form-grid" style="margin-top: 10px;">
           <div class="filter-item">
             <label>年金開始年齢 (本人)</label>
@@ -200,12 +200,6 @@ const commitBasicReduction = () => {
              <input type="checkbox" v-model="pensionConfig.includeSpouse" id="includeSpouse" />
              <label for="includeSpouse" style="margin: 0;">配偶者の基礎年金を合算</label>
           </div>
-        </div>
-      </details>
-
-      <details style="margin-top: 10px;">
-        <summary style="font-size: 0.8rem; cursor: pointer; color: var(--muted);">詳細設定</summary>
-        <div class="fire-form-grid" style="margin-top: 10px;">
           <div class="filter-item" v-if="householdType === 'family'">
             <label>子の独立年齢</label>
             <input v-model.lazy.number="independenceAge" type="number" />
