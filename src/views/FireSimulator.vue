@@ -186,7 +186,7 @@ const commitBasicReduction = () => {
               step="1"
               class="is-public"
             />
-            <small class="meta">基礎年金反映率(未納期間がある場合等に設定してください)</small>
+            <small class="meta">*未納期間がある場合等に設定してください</small>
           </div>
           <div class="filter-item">
             <label>今後の厚生年金増分 (年額/年)</label>
