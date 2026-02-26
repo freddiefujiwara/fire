@@ -374,7 +374,7 @@ td {
 }
 
 .balance-net-worth {
-  background: color-mix(in oklab, #3b82f6 22%, var(--surface-elevated));
+  background: color-mix(in oklab, var(--primary) 22%, var(--surface-elevated));
 }
 
 .chart-grid {
