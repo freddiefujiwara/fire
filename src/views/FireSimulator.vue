@@ -84,6 +84,20 @@ const onSimulationEndAgeInput = (event) => {
 const commitSimulationEndAge = () => {
   simulationEndAge.value = simulationEndAgePreview.value;
 };
+
+const monteCarloTargetSuccessRatePreview = ref(monteCarloTargetSuccessRate.value);
+
+watch(monteCarloTargetSuccessRate, (newRate) => {
+  monteCarloTargetSuccessRatePreview.value = newRate;
+});
+
+const onMonteCarloTargetSuccessRateInput = (event) => {
+  monteCarloTargetSuccessRatePreview.value = Number(event.target.value);
+};
+
+const commitMonteCarloTargetSuccessRate = () => {
+  monteCarloTargetSuccessRate.value = monteCarloTargetSuccessRatePreview.value;
+};
 </script>
 
 <template>
@@ -271,8 +285,8 @@ const commitSimulationEndAge = () => {
             <input v-model.lazy.number="monteCarloSeed" type="number" />
           </div>
           <div class="filter-item">
-            <label>目標FIRE成功率 (%)</label>
-            <input v-model.lazy.number="monteCarloTargetSuccessRate" type="number" step="1" min="1" max="99" />
+            <label>目標FIRE成功率 ({{ monteCarloTargetSuccessRatePreview }}%)</label>
+            <input :value="monteCarloTargetSuccessRatePreview" @input="onMonteCarloTargetSuccessRateInput" @change="commitMonteCarloTargetSuccessRate" @blur="commitMonteCarloTargetSuccessRate" type="range" min="1" max="99" step="1" class="is-public" />
           </div>
         </div>
         <div v-if="useMonteCarlo" style="margin-top: 12px;">
