@@ -39,6 +39,7 @@ const {
   monthlyExpense,
   monthlyIncome,
   annualInvestment,
+  annualCashflowSurplus,
   annualSavings,
   postFireFirstYearExtraExpense,
   annualSimulationData,
@@ -56,6 +57,8 @@ const {
   copyConditionsAndAlgorithm,
   copyAnnualTable,
   downloadAnnualTableCsv,
+  mortgagePayoffAge,
+  dependentIndependenceAges,
   // New exports
   householdType,
   userBirthDate,
@@ -294,7 +297,7 @@ const commitBasicReduction = () => {
         <h4 style="font-size: 0.9rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
           🎲 順序リスク評価 (モンテカルロ法)
           <label class="auto-toggle is-public">
-            <input type="checkbox" v-model="useMonteCarlo" class="is-public" /> 有効にする
+            <input type="checkbox" v-model="useMonteCarlo" class="is-public" id="useMonteCarloCheckbox" /> 有効にする
           </label>
         </h4>
         <div v-if="useMonteCarlo" class="fire-form-grid">
@@ -336,82 +339,205 @@ const commitBasicReduction = () => {
 
       <div class="initial-summary">
         <details>
-          <summary>条件の確認</summary>
+          <summary>シミュレーション設定内容の確認 (全パラメータ)</summary>
           <div class="initial-summary-grid">
-            <div>
-            <div>
-              <span class="meta">初期リスク資産 (入力値):</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(manualInitialRiskAssets) }}</span>
+            <div class="summary-group">
+              <h4 class="summary-group-title">基本情報・家族</h4>
+              <div class="summary-item">
+                <span class="meta">世帯構成:</span>
+                <span>{{ householdType === 'single' ? '単身' : householdType === 'couple' ? '夫婦' : '家族 (子あり)' }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">本人生年月日:</span>
+                <span>{{ userBirthDate }} (現在{{ currentAge }}歳)</span>
+              </div>
+              <div class="summary-item" v-if="householdType !== 'single'">
+                <span class="meta">配偶者生年月日:</span>
+                <span>{{ spouseBirthDate }}</span>
+              </div>
+              <div class="summary-item" v-if="householdType === 'family'">
+                <span class="meta">子の生年月日:</span>
+                <span>{{ dependentBirthDates.join(', ') }}</span>
+              </div>
+              <div class="summary-item" v-if="householdType === 'family'">
+                <span class="meta">子の独立年齢:</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span>{{ independenceAge }}歳</span>
+                  <div v-for="(item, idx) in dependentIndependenceAges" :key="idx">
+                    <small class="meta">{{ item.label }}: 本人{{ item.age }}歳時</small>
+                  </div>
+                </div>
+              </div>
+              <div class="summary-item">
+                <span class="meta">資産寿命の目標年齢:</span>
+                <span>{{ simulationEndAge }}歳</span>
+              </div>
             </div>
-            <div>
-              <span class="meta">初期現金資産 (入力値):</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(manualInitialCashAssets) }}</span>
+
+            <div class="summary-group">
+              <h4 class="summary-group-title">資産・収支</h4>
+              <div class="summary-item">
+                <span class="meta">初期リスク資産:</span>
+                <span class="amount-value">{{ formatYen(manualInitialRiskAssets) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">初期現金資産:</span>
+                <span class="amount-value">{{ formatYen(manualInitialCashAssets) }}</span>
+              </div>
+              <div class="summary-item highlight-item">
+                <span class="meta">総金融資産:</span>
+                <span class="amount-value">{{ formatYen(initialAssets) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">毎月の投資額:</span>
+                <span class="amount-value">{{ formatYen(monthlyInvestment) }}</span>
+                <small class="meta">({{ formatYen(annualInvestment) }} / 年)</small>
+              </div>
+              <div class="summary-item">
+                <span class="meta">生活防衛資金 (月数):</span>
+                <span>{{ monthsOfCash.toFixed(1) }} ヶ月分</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">生活費 (月額):</span>
+                <span class="amount-value">{{ formatYen(manualMonthlyExpense) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">定期収入 (月額):</span>
+                <span class="amount-value">{{ formatYen(manualRegularMonthlyIncome) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">ボーナス考慮:</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span>{{ includeBonus ? `あり (${formatYen(manualAnnualBonus)} / 年)` : 'なし' }}</span>
+                  <small v-if="includeBonus && isAnnualBonusManual" class="meta">[手入力]</small>
+                </div>
+              </div>
+              <div class="summary-item">
+                <span class="meta">住宅ローン月額:</span>
+                <span class="amount-value">{{ formatYen(mortgageMonthlyPayment) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">ローン完済年月:</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span>{{ mortgagePayoffDate || '設定なし' }}</span>
+                  <small v-if="mortgagePayoffAge" class="meta">(本人{{ mortgagePayoffAge }}歳時)</small>
+                </div>
+              </div>
+              <div class="summary-item">
+                <span class="meta">FIRE時の退職金:</span>
+                <span class="amount-value">{{ formatYen(retirementLumpSumAtFire) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">FIRE1年目の追加支出:</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span class="amount-value">{{ formatYen(manualPostFireFirstYearExtraExpense) }}</span>
+                  <small v-if="isPostFireFirstYearExtraExpenseManual" class="meta">[手入力]</small>
+                </div>
+              </div>
+              <div class="summary-item">
+                <span class="meta">FIRE後社会保険料・税(月額):</span>
+                <span class="amount-value">{{ formatYen(postFireExtraExpense) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">合計収入 (月額平均):</span>
+                <span class="amount-value">{{ formatYen(monthlyIncome) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">年間収支剰余 (投資前):</span>
+                <span class="amount-value">{{ formatYen(annualCashflowSurplus) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">年間現金増分 (投資後):</span>
+                <span class="amount-value">{{ formatYen(annualSavings) }}</span>
+              </div>
             </div>
-              <span class="meta">総金融資産:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(initialAssets) }}</span>
+
+            <div class="summary-group">
+              <h4 class="summary-group-title">運用・シミュレーション条件</h4>
+              <div class="summary-item">
+                <span class="meta">期待リターン:</span>
+                <span>{{ annualReturnRate }}%</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">取り崩し率:</span>
+                <span>{{ withdrawalRate }}%</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">インフレ考慮:</span>
+                <span>{{ includeInflation ? `あり (${inflationRate}%)` : 'なし' }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">税金考慮:</span>
+                <span>{{ includeTax ? `あり (${taxRate}%)` : 'なし' }}</span>
+              </div>
+              <div class="summary-item highlight-item">
+                <span class="meta">必要資産目安:</span>
+                <span class="amount-value">{{ formatYen(requiredAssetsAtFire) }}</span>
+                <small class="meta">({{ fireAchievementAge }}歳時点)</small>
+              </div>
             </div>
-            <div>
-              <span class="meta">うちリスク資産:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(riskAssets) }}</span>
-              <span class="meta"> ({{ (initialAssets > 0) ? ((riskAssets / initialAssets) * 100).toFixed(1) : 0 }}% / 総資産比)</span>
+
+            <div class="summary-group">
+              <h4 class="summary-group-title">年金設定</h4>
+              <div class="summary-item">
+                <span class="meta">年金開始年齢 (本人):</span>
+                <span>{{ pensionConfig.userStartAge }}歳</span>
+              </div>
+              <div class="summary-item" v-if="householdType !== 'single'">
+                <span class="meta">配偶者年金開始 (本人年齢):</span>
+                <span>{{ pensionConfig.spouseUserAgeStart }}歳</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">厚生年金既発生額 (年額):</span>
+                <span class="amount-value">{{ formatYen(pensionConfig.userKoseiAccruedAtDataAgeAnnualYen) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">基礎年金反映率:</span>
+                <span>{{ Math.round((pensionConfig.basicReduction ?? 1) * 100) }}%</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">厚生年金増分 (年額/年):</span>
+                <span class="amount-value">{{ formatYen(pensionConfig.userKoseiFutureFactorAnnualYenPerYear) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">データ基準年 (本人年齢):</span>
+                <span>{{ pensionConfig.pensionDataAge }}歳</span>
+              </div>
+              <div class="summary-item" v-if="householdType !== 'single'">
+                <span class="meta">配偶者の基礎年金合算:</span>
+                <span>{{ pensionConfig.includeSpouse ? 'あり' : 'なし' }}</span>
+              </div>
+              <div class="summary-item highlight-item">
+                <span class="meta">年金受給見込み (月額):</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span class="amount-value">{{ formatYen(estimatedMonthlyPensionAtStartAge) }}</span>
+                  <small class="meta">受給開始: {{ pensionConfig.userStartAge }}歳 / {{ fireAchievementAge }}歳でFIRE時</small>
+                </div>
+              </div>
             </div>
-            <div>
-              <span class="meta">現金資産:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(cashAssets) }}</span>
-              <span class="meta"> (生活費の{{ monthsOfCash.toFixed(1) }}ヶ月分)</span>
-            </div>
-            <div>
-              <span class="meta">推定年間支出:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(monthlyExpense * 12) }}</span>
-            </div>
-            <div>
-              <span class="meta">推定年間収入:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(monthlyIncome * 12) }}</span>
-            </div>
-            <div>
-              <span class="meta">年間投資額:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(annualInvestment) }}</span>
-            </div>
-            <div>
-              <span class="meta">年間貯金額:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(annualSavings) }}</span>
-            </div>
-            <div>
-            <div>
-              <span class="meta">ボーナス (入力値):</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(manualAnnualBonus) }}</span>
-            </div>
-              <span class="meta">うちボーナス:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(annualBonus) }}</span>
-            </div>
-            <div>
-              <span class="meta">必要資産目安:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(requiredAssetsAtFire) }}</span>
-              <span class="meta"> ({{ fireAchievementAge }}歳時点・{{ simulationEndAge }}歳寿命)</span>
-            </div>
-            <div>
-              <span class="meta">ローン完済年月:</span>
-              <span style="margin-left: 8px;">{{ mortgagePayoffDate || '設定なし' }}</span>
-            </div>
-            <div>
-              <span class="meta">期待リターン:</span>
-              <span style="margin-left: 8px;">{{ annualReturnRate }}%</span>
-            </div>
-            <div>
-              <span class="meta">取り崩し率:</span>
-              <span style="margin-left: 8px;">{{ withdrawalRate }}%</span>
-            </div>
-            <div v-if="includeInflation">
-              <span class="meta">インフレ率:</span>
-              <span style="margin-left: 8px;">{{ inflationRate }}%</span>
-            </div>
-            <div v-if="includeTax">
-              <span class="meta">税率:</span>
-              <span style="margin-left: 8px;">{{ taxRate }}%</span>
-            </div>
-            <div>
-              <span class="meta">FIRE後追加支出:</span>
-              <span class="amount-value" style="margin-left: 8px;">{{ formatYen(postFireExtraExpense) }}</span>
+
+            <div class="summary-group">
+              <h4 class="summary-group-title">モンテカルロ法設定</h4>
+              <div class="summary-item">
+                <span class="meta">順序リスク評価:</span>
+                <span>{{ useMonteCarlo ? '有効' : '無効' }}</span>
+              </div>
+              <div class="summary-item" :style="{ opacity: useMonteCarlo ? 1 : 0.5 }">
+                <span class="meta">試行回数:</span>
+                <span>{{ monteCarloTrials }}回</span>
+              </div>
+              <div class="summary-item" :style="{ opacity: useMonteCarlo ? 1 : 0.5 }">
+                <span class="meta">年率ボラティリティ:</span>
+                <span>{{ monteCarloVolatility }}%</span>
+              </div>
+              <div class="summary-item" :style="{ opacity: useMonteCarlo ? 1 : 0.5 }">
+                <span class="meta">乱数シード:</span>
+                <span>{{ monteCarloSeed }}</span>
+              </div>
+              <div class="summary-item" :style="{ opacity: useMonteCarlo ? 1 : 0.5 }">
+                <span class="meta">目標FIRE成功率:</span>
+                <span>{{ monteCarloTargetSuccessRate }}%</span>
+              </div>
             </div>
           </div>
         </details>
@@ -595,8 +721,35 @@ const commitBasicReduction = () => {
 .initial-summary-grid {
   margin-top: 10px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+.summary-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.summary-group-title {
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  gap: 8px;
+}
+.highlight-item {
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: color-mix(in oklab, var(--primary), transparent 92%);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary);
 }
 .breakdown-content {
   margin-top: 8px;

@@ -225,8 +225,8 @@ describe("useFireSimulatorViewModel", () => {
     await vi.runAllTimersAsync();
 
     const payload = JSON.parse(vm.copyConditionsAndAlgorithm());
-    expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireMonth).toBe(60);
-    expect(payload.monteCarloSimulation.terminalDepletionGuide.recommendedFireAge).toBeDefined();
+    expect(payload.monteCarloSimulation.results.terminalDepletionGuide.recommendedFireMonth).toBe(60);
+    expect(payload.monteCarloSimulation.results.terminalDepletionGuide.recommendedFireAge).toBeDefined();
   });
 
   it("automatically updates bonus and extra expense when regular income changes unless manual flag is set", async () => {

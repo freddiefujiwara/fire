@@ -312,6 +312,7 @@ export function useFireSimulatorViewModel() {
   const annualBonus = computed(() => (includeBonus.value ? manualAnnualBonus.value : 0));
   const monthlyIncome = computed(() => regularMonthlyIncome.value + annualBonus.value / 12);
   const annualInvestment = computed(() => monthlyInvestment.value * 12);
+  const annualCashflowSurplus = computed(() => (monthlyIncome.value - monthlyExpense.value) * 12);
   const annualSavings = computed(() => Math.max(0, (monthlyIncome.value - monthlyExpense.value - monthlyInvestment.value) * 12));
   const monthsOfCash = computed(() => (monthlyExpense.value > 0 ? cashAssets.value / monthlyExpense.value : 0));
 
@@ -504,11 +505,15 @@ export function useFireSimulatorViewModel() {
     totalFinancialAssetsYen: initialAssets.value,
     riskAssetsYen: riskAssets.value,
     cashAssetsYen: cashAssets.value,
+    monthlyInvestmentYen: monthlyInvestment.value,
+    monthlyExpenseYen: manualMonthlyExpense.value,
+    regularMonthlyIncomeYen: manualRegularMonthlyIncome.value,
     estimatedAnnualExpenseYen: monthlyExpense.value * 12,
     estimatedAnnualIncomeYen: monthlyIncome.value * 12,
     annualInvestmentYen: annualInvestment.value,
     annualSavingsYen: annualSavings.value,
-    annualBonusYen: annualBonus.value,
+    annualBonusYen: manualAnnualBonus.value,
+    isAnnualBonusManual: isAnnualBonusManual.value,
     mortgageMonthlyPaymentYen: mortgageMonthlyPayment.value,
     requiredAssetsAtFireYen: requiredAssetsAtFire.value,
     fireAchievementMonth: fireAchievementMonth.value,
@@ -524,10 +529,20 @@ export function useFireSimulatorViewModel() {
     withdrawalRatePercent: withdrawalRate.value,
     postFireExtraExpenseMonthlyYen: postFireExtraExpense.value,
     postFireFirstYearExtraExpenseYen: postFireFirstYearExtraExpense.value,
+    isPostFireFirstYearExtraExpenseManual: isPostFireFirstYearExtraExpenseManual.value,
     retirementLumpSumAtFireYen: retirementLumpSumAtFire.value,
+    includeBonus: includeBonus.value,
+    monthsOfCash: monthsOfCash.value,
+    annualCashflowSurplusYen: annualCashflowSurplus.value,
+    useMonteCarlo: useMonteCarlo.value,
+    monteCarloTrials: monteCarloTrials.value,
+    monteCarloVolatilityPercent: monteCarloVolatility.value,
+    monteCarloSeed: monteCarloSeed.value,
+    targetFireSuccessRatePercent: monteCarloTargetSuccessRate.value,
     userBirthDate: userBirthDate.value,
     spouseBirthDate: householdType.value === "single" ? null : spouseBirthDate.value,
-    dependentBirthDates: dependentBirthDates.value.filter(Boolean).slice(0, 3),
+    dependentBirthDates: householdType.value === "family" ? dependentBirthDates.value.filter(Boolean).slice(0, 3) : [],
+    independenceAge: householdType.value === "family" ? independenceAge.value : null,
     pensionConfig: pensionConfig.value,
   }));
 
@@ -541,12 +556,9 @@ export function useFireSimulatorViewModel() {
       buildConditionsAndAlgorithmJson({
         conditions: conditionsPayload.value,
         monteCarloResults: monteCarloResults.value,
-        monteCarloVolatility: monteCarloVolatility.value,
-        monteCarloSeed: monteCarloSeed.value,
         estimatedMonthlyPensionAtStartAge: estimatedMonthlyPensionAtStartAge.value,
         pensionAnnualAtFire: pensionAnnualAtFire.value,
         pensionEstimateAge: pensionEstimateAge.value,
-        fireAchievementAge: fireAchievementAge.value,
         algorithmExplanation: algorithmExplanationFull.value,
       }),
       null,
@@ -698,6 +710,7 @@ export function useFireSimulatorViewModel() {
     monthlyExpense,
     monthlyIncome,
     annualInvestment,
+    annualCashflowSurplus,
     annualSavings,
     postFireFirstYearExtraExpense,
     growthData,
@@ -716,11 +729,14 @@ export function useFireSimulatorViewModel() {
     isCalculatingMonteCarlo,
     runMonteCarlo,
     monteCarloResults,
+    calculateStartAgeAdjustmentRate,
     algorithmExplanationSegments,
     copyConditionsAndAlgorithm,
     copyAnnualTable,
     downloadAnnualTableCsv,
     mortgageOptions: computed(() => createMortgageOptions()),
+    mortgagePayoffAge,
+    dependentIndependenceAges,
     // New exports
     householdType,
     userBirthDate,
