@@ -57,6 +57,8 @@ const {
   copyConditionsAndAlgorithm,
   copyAnnualTable,
   downloadAnnualTableCsv,
+  mortgagePayoffAge,
+  dependentIndependenceAges,
   // New exports
   householdType,
   userBirthDate,
@@ -336,7 +338,7 @@ const commitBasicReduction = () => {
       </div>
 
       <div class="initial-summary">
-        <details open>
+        <details>
           <summary>シミュレーション設定内容の確認 (全パラメータ)</summary>
           <div class="initial-summary-grid">
             <div class="summary-group">
@@ -359,7 +361,12 @@ const commitBasicReduction = () => {
               </div>
               <div class="summary-item" v-if="householdType === 'family'">
                 <span class="meta">子の独立年齢:</span>
-                <span>{{ independenceAge }}歳</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span>{{ independenceAge }}歳</span>
+                  <div v-for="(item, idx) in dependentIndependenceAges" :key="idx">
+                    <small class="meta">{{ item.label }}: 本人{{ item.age }}歳時</small>
+                  </div>
+                </div>
               </div>
               <div class="summary-item">
                 <span class="meta">資産寿命の目標年齢:</span>
@@ -400,7 +407,10 @@ const commitBasicReduction = () => {
               </div>
               <div class="summary-item">
                 <span class="meta">ボーナス考慮:</span>
-                <span>{{ includeBonus ? `あり (${formatYen(manualAnnualBonus)} / 年)` : 'なし' }}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span>{{ includeBonus ? `あり (${formatYen(manualAnnualBonus)} / 年)` : 'なし' }}</span>
+                  <small v-if="includeBonus && isAnnualBonusManual" class="meta">[手入力]</small>
+                </div>
               </div>
               <div class="summary-item">
                 <span class="meta">住宅ローン月額:</span>
@@ -408,7 +418,10 @@ const commitBasicReduction = () => {
               </div>
               <div class="summary-item">
                 <span class="meta">ローン完済年月:</span>
-                <span>{{ mortgagePayoffDate || '設定なし' }}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span>{{ mortgagePayoffDate || '設定なし' }}</span>
+                  <small v-if="mortgagePayoffAge" class="meta">(本人{{ mortgagePayoffAge }}歳時)</small>
+                </div>
               </div>
               <div class="summary-item">
                 <span class="meta">FIRE時の退職金:</span>
@@ -416,7 +429,10 @@ const commitBasicReduction = () => {
               </div>
               <div class="summary-item">
                 <span class="meta">FIRE1年目の追加支出:</span>
-                <span class="amount-value">{{ formatYen(manualPostFireFirstYearExtraExpense) }}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                  <span class="amount-value">{{ formatYen(manualPostFireFirstYearExtraExpense) }}</span>
+                  <small v-if="isPostFireFirstYearExtraExpenseManual" class="meta">[手入力]</small>
+                </div>
               </div>
               <div class="summary-item">
                 <span class="meta">FIRE後社会保険料・税(月額):</span>

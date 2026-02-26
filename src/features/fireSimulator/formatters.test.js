@@ -68,6 +68,11 @@ describe("fireSimulator formatters", () => {
           spouseUserAgeStart: 62,
           includeSpouse: true,
         },
+        useMonteCarlo: true,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPercent: 18,
+        monteCarloSeed: 42,
+        targetFireSuccessRatePercent: 80,
       },
       monteCarloResults: {
         successRate: 0.51,
@@ -82,20 +87,17 @@ describe("fireSimulator formatters", () => {
           boundaryHit: null,
         },
       },
-      monteCarloVolatility: 18,
-      monteCarloSeed: 42,
-      estimatedMonthlyPensionAt60: 100,
+      estimatedMonthlyPensionAtStartAge: 100,
       pensionAnnualAtFire: 1200,
       pensionEstimateAge: 62,
-      fireAchievementAge: 45,
       algorithmExplanation: "keep-this",
     });
 
     expect(result.simulationInputs.portfolioAndCashflow.mortgageMonthlyPaymentYen).toBe(10);
     expect(result.simulationInputs.householdProfile.spouseBirthDate).toBe("1992-02-02");
     expect(result.keyResults.fireTarget.fireAchievementAge).toBe(45);
-    expect(result.monteCarloSimulation.terminalAssetsPercentilesYen.p50Yen).toBe(2);
-    expect(result.monteCarloSimulation.terminalDepletionGuide).toEqual({
+    expect(result.monteCarloSimulation.results.terminalAssetsPercentilesYen.p50Yen).toBe(2);
+    expect(result.monteCarloSimulation.results.terminalDepletionGuide).toEqual({
       simulationEndAge: 100,
       recommendedFireMonth: 192,
       recommendedFireAge: 56,

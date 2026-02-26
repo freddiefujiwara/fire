@@ -51,12 +51,9 @@ export function formatMonths(months) {
 export function buildConditionsAndAlgorithmJson({
   conditions,
   monteCarloResults,
-  monteCarloVolatility,
-  monteCarloSeed,
   estimatedMonthlyPensionAtStartAge,
   pensionAnnualAtFire,
   pensionEstimateAge,
-  fireAchievementAge,
   algorithmExplanation,
 }) {
   const pensionConfig = conditions.pensionConfig;
@@ -65,11 +62,18 @@ export function buildConditionsAndAlgorithmJson({
     totalFinancialAssetsYen,
     riskAssetsYen,
     cashAssetsYen,
+    monthlyInvestmentYen,
+    monthlyExpenseYen,
+    regularMonthlyIncomeYen,
     estimatedAnnualExpenseYen,
     estimatedAnnualIncomeYen,
     annualInvestmentYen,
     annualSavingsYen,
     annualBonusYen,
+    isAnnualBonusManual,
+    includeBonus,
+    monthsOfCash,
+    annualCashflowSurplusYen,
     mortgageMonthlyPaymentYen,
     mortgagePayoffDate,
     includeInflation,
@@ -80,15 +84,22 @@ export function buildConditionsAndAlgorithmJson({
     withdrawalRatePercent,
     postFireExtraExpenseMonthlyYen,
     postFireFirstYearExtraExpenseYen,
+    isPostFireFirstYearExtraExpenseManual,
     retirementLumpSumAtFireYen,
     userBirthDate,
     spouseBirthDate,
     dependentBirthDates,
+    independenceAge,
     requiredAssetsAtFireYen,
     fireAchievementMonth,
     fireAchievementAge: fireAchievementAgeFromConditions,
     currentAge,
     simulationEndAge,
+    useMonteCarlo,
+    monteCarloTrials,
+    monteCarloVolatilityPercent,
+    monteCarloSeed,
+    targetFireSuccessRatePercent,
   } = conditions;
 
   const terminalDepletionPlan = monteCarloResults?.terminalDepletionPlan || null;
@@ -97,38 +108,31 @@ export function buildConditionsAndAlgorithmJson({
     ? null
     : Math.floor(currentAge + recommendedFireMonth / 12);
 
-  const monteCarloSimulation = monteCarloResults
-    ? {
-        enabled: true,
-        trials: monteCarloResults.trials,
-        annualVolatilityPercent: monteCarloVolatility,
-        seed: monteCarloSeed,
-        successRatePercent: Number((monteCarloResults.successRate * 100).toFixed(1)),
-        terminalAssetsPercentilesYen: {
-          p10Yen: monteCarloResults.p10,
-          p50Yen: monteCarloResults.p50,
-          p90Yen: monteCarloResults.p90,
-        },
-        terminalDepletionGuide: terminalDepletionPlan
-          ? {
-              simulationEndAge,
-              recommendedFireMonth,
-              recommendedFireAge,
-              p50TerminalAssetsYen: terminalDepletionPlan.p50TerminalAssets,
-              successRatePercent: Number((terminalDepletionPlan.successRate * 100).toFixed(1)),
-              boundaryHit: terminalDepletionPlan.boundaryHit,
-            }
-          : null,
-      }
-    : {
-        enabled: false,
-        trials: null,
-        annualVolatilityPercent: monteCarloVolatility,
-        seed: monteCarloSeed,
-        successRatePercent: null,
-        terminalAssetsPercentilesYen: null,
-        terminalDepletionGuide: null,
-      };
+  const monteCarloSimulation = {
+    enabled: useMonteCarlo,
+    trials: monteCarloTrials,
+    annualVolatilityPercent: monteCarloVolatilityPercent,
+    seed: monteCarloSeed,
+    targetSuccessRatePercent: targetFireSuccessRatePercent,
+    results: monteCarloResults ? {
+      successRatePercent: Number((monteCarloResults.successRate * 100).toFixed(1)),
+      terminalAssetsPercentilesYen: {
+        p10Yen: monteCarloResults.p10,
+        p50Yen: monteCarloResults.p50,
+        p90Yen: monteCarloResults.p90,
+      },
+      terminalDepletionGuide: terminalDepletionPlan
+        ? {
+            simulationEndAge,
+            recommendedFireMonth,
+            recommendedFireAge,
+            p50TerminalAssetsYen: terminalDepletionPlan.p50TerminalAssets,
+            successRatePercent: Number((terminalDepletionPlan.successRate * 100).toFixed(1)),
+            boundaryHit: terminalDepletionPlan.boundaryHit,
+          }
+        : null,
+    } : null
+  };
 
   return {
     simulationInputs: {
@@ -137,16 +141,26 @@ export function buildConditionsAndAlgorithmJson({
         userBirthDate,
         spouseBirthDate,
         dependentBirthDates,
+        independenceAge,
       },
       portfolioAndCashflow: {
         totalFinancialAssetsYen,
         riskAssetsYen,
         cashAssetsYen,
+        rawMonthlyInputs: {
+          monthlyInvestmentYen,
+          monthlyExpenseYen,
+          regularMonthlyIncomeYen,
+        },
         estimatedAnnualExpenseYen,
         estimatedAnnualIncomeYen,
         annualInvestmentYen,
         annualSavingsYen,
         annualBonusYen,
+        isAnnualBonusManual,
+        includeBonus,
+        monthsOfCash,
+        annualCashflowSurplusYen,
         mortgageMonthlyPaymentYen,
         mortgagePayoffDate,
       },
@@ -157,10 +171,12 @@ export function buildConditionsAndAlgorithmJson({
         includeTax,
         taxRatePercent,
         withdrawalRatePercent,
+        simulationEndAge,
       },
       postFirePlan: {
         postFireExtraExpenseMonthlyYen,
         postFireFirstYearExtraExpenseYen,
+        isPostFireFirstYearExtraExpenseManual,
         retirementLumpSumAtFireYen,
       },
       pensionConfig,
