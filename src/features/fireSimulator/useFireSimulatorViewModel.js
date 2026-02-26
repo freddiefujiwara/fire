@@ -312,6 +312,7 @@ export function useFireSimulatorViewModel() {
   const annualBonus = computed(() => (includeBonus.value ? manualAnnualBonus.value : 0));
   const monthlyIncome = computed(() => regularMonthlyIncome.value + annualBonus.value / 12);
   const annualInvestment = computed(() => monthlyInvestment.value * 12);
+  const annualCashflowSurplus = computed(() => (monthlyIncome.value - monthlyExpense.value) * 12);
   const annualSavings = computed(() => Math.max(0, (monthlyIncome.value - monthlyExpense.value - monthlyInvestment.value) * 12));
   const monthsOfCash = computed(() => (monthlyExpense.value > 0 ? cashAssets.value / monthlyExpense.value : 0));
 
@@ -698,6 +699,7 @@ export function useFireSimulatorViewModel() {
     monthlyExpense,
     monthlyIncome,
     annualInvestment,
+    annualCashflowSurplus,
     annualSavings,
     postFireFirstYearExtraExpense,
     growthData,
@@ -716,6 +718,7 @@ export function useFireSimulatorViewModel() {
     isCalculatingMonteCarlo,
     runMonteCarlo,
     monteCarloResults,
+    calculateStartAgeAdjustmentRate,
     algorithmExplanationSegments,
     copyConditionsAndAlgorithm,
     copyAnnualTable,
