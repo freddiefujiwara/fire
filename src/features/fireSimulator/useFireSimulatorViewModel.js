@@ -219,9 +219,6 @@ export function useFireSimulatorViewModel() {
     if (decoded.pc?.earlyReduction === undefined) {
       pensionConfig.value.earlyReduction = calculateStartAgeAdjustmentRate(pensionConfig.value.userStartAge);
     }
-    if ((!decoded.dbds || decoded.dbds.length === 0) && decoded.dbd) {
-      dependentBirthDates.value = [decoded.dbd];
-    }
     if (!Array.isArray(dependentBirthDates.value)) {
       dependentBirthDates.value = [DEFAULT_DEPENDENT_BIRTH_DATE];
     }
@@ -276,6 +273,14 @@ export function useFireSimulatorViewModel() {
       manualPostFireFirstYearExtraExpense.value = Math.round((annualIncome * DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO) / 10000) * 10000;
     }
   });
+
+  watch(
+    () => pensionConfig.value.userStartAge,
+    (newStartAge) => {
+      pensionConfig.value.earlyReduction = calculateStartAgeAdjustmentRate(newStartAge);
+    },
+    { immediate: true },
+  );
 
   const DEFAULT_ENCODED_STATE = encode(getDefaultState());
 

@@ -147,7 +147,7 @@ describe("fire domain", () => {
       expect(text).toContain("適用調整率 = 0.856");
     });
 
-    it("uses explicit pension adjustment override when provided", () => {
+    it("uses auto-calculated pension adjustment from start age", () => {
       const segments = generateAlgorithmExplanationSegments({
         fireAchievementAge: 45,
         pensionAnnualAtFire: 1200000,
@@ -164,8 +164,8 @@ describe("fire domain", () => {
         pensionProjectedAnnual: 1200000,
         pensionConfig: {
           userStartAge: 68,
-          earlyReduction: 1.111,
           pensionDataAge: 45,
+          basicReduction: 0.95,
           userKoseiAccruedAtDataAgeAnnualYen: 600000,
           userKoseiFutureFactorAnnualYenPerYear: 0,
         },
@@ -173,8 +173,9 @@ describe("fire domain", () => {
 
       const text = segments.map((seg) => seg.value).join("");
       expect(text).toContain("受給開始年齢=68歳（繰下げ）");
+      expect(text).toContain("基礎年金反映率 (basicReduction) = 0.95");
       expect(text).toContain("自動算出調整率 = 1.252");
-      expect(text).toContain("適用調整率 = 1.111");
+      expect(text).toContain("適用調整率 = 1.252");
     });
   });
 
