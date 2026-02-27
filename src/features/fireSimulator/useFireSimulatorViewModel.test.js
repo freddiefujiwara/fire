@@ -275,4 +275,66 @@ describe("useFireSimulatorViewModel", () => {
 
     expect(createObjectURLSpy).toHaveBeenCalled();
   });
+
+  describe("microCorpLink", () => {
+    it("generates dynamic link with Spouse (1) and Child (1) for family", async () => {
+      const vm = useFireSimulatorViewModel();
+      vm.householdType.value = "family";
+      vm.dependentBirthDates.value = ["2012-09-09"];
+      await nextTick();
+
+      const { decode } = await import("@/domain/fire/url");
+      const encoded = vm.microCorpLink.value.split("/").pop();
+      const decoded = decode(encoded);
+
+      expect(decoded.dependents).toBe(2); // 1 Spouse + 1 Child
+    });
+
+    it("generates dynamic link with 0 dependents for single", async () => {
+      const vm = useFireSimulatorViewModel();
+      vm.householdType.value = "single";
+      await nextTick();
+
+      const { decode } = await import("@/domain/fire/url");
+      const encoded = vm.microCorpLink.value.split("/").pop();
+      const decoded = decode(encoded);
+
+      expect(decoded.dependents).toBe(0);
+    });
+
+    it("generates dynamic link with 1 dependent for couple", async () => {
+      const vm = useFireSimulatorViewModel();
+      vm.householdType.value = "couple";
+      await nextTick();
+
+      const { decode } = await import("@/domain/fire/url");
+      const encoded = vm.microCorpLink.value.split("/").pop();
+      const decoded = decode(encoded);
+
+      expect(decoded.dependents).toBe(1);
+    });
+
+    it("estimates gross salary and taxable income accurately", async () => {
+      const vm = useFireSimulatorViewModel();
+      // Set to 400k net monthly, 1M net bonus
+      vm.manualRegularMonthlyIncome.value = 400000;
+      vm.isAnnualBonusManual.value = true;
+      vm.manualAnnualBonus.value = 1000000;
+      vm.householdType.value = "family";
+      vm.dependentBirthDates.value = ["2012-09-09"];
+      await nextTick();
+
+      const { decode } = await import("@/domain/fire/url");
+      const encoded = vm.microCorpLink.value.split("/").pop();
+      const decoded = decode(encoded);
+
+      // netAnnual = 5.8M
+      // grossAnnual = 5.8M / 0.82 = 7,073,170.7...
+      // previousSalary = 589,431
+      expect(decoded.previousSalary).toBe(589431);
+
+      // taxableIncome = 2,964,878 (as calculated in verification)
+      expect(decoded.taxableIncome).toBe(2964878);
+    });
+  });
 });
