@@ -574,9 +574,25 @@ export function useFireSimulatorViewModel() {
 
   const microCorpLink = computed(() => {
     const birthYear = new Date(userBirthDate.value).getFullYear();
-    const dependents = dependentBirthDates.value.length;
-    const previousSalary = manualRegularMonthlyIncome.value;
-    const taxableIncome = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
+
+    // Dependents = Spouse (if any) + Children
+    let dependents = 0;
+    if (householdType.value === "couple" || householdType.value === "family") {
+      dependents += 1; // Spouse
+    }
+    if (householdType.value === "family") {
+      dependents += dependentBirthDates.value.length;
+    }
+
+    // Estimate Gross from Net (Approx Net / 0.8)
+    const netMonthly = manualRegularMonthlyIncome.value;
+    const grossMonthly = Math.round(netMonthly / 0.8);
+    const previousSalary = grossMonthly;
+
+    // Estimate Taxable Income from Gross Annual (Approx Gross * 0.6)
+    const netAnnual = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
+    const grossAnnual = netAnnual / 0.8;
+    const taxableIncome = Math.round(grossAnnual * 0.6);
 
     const payload = {
       birthYear,
