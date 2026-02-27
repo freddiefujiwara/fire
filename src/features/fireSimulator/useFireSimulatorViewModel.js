@@ -584,15 +584,59 @@ export function useFireSimulatorViewModel() {
       dependents += dependentBirthDates.value.length;
     }
 
-    // Estimate Gross from Net (Approx Net / 0.8)
-    const netMonthly = manualRegularMonthlyIncome.value;
-    const grossMonthly = Math.round(netMonthly / 0.8);
-    const previousSalary = grossMonthly;
-
-    // Estimate Taxable Income from Gross Annual (Approx Gross * 0.6)
+    // More accurate estimation logic
     const netAnnual = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
-    const grossAnnual = netAnnual / 0.8;
-    const taxableIncome = Math.round(grossAnnual * 0.6);
+
+    /**
+     * Estimate Gross Annual from Net Annual.
+     * Net is roughly Gross * (0.85 to 0.7 depending on bracket).
+     * @param {number} net - Annual net income.
+     * @returns {number} Estimated annual gross income.
+     */
+    const estimateGross = (net) => {
+      if (net <= 3000000) return net / 0.85;
+      if (net <= 6000000) return net / 0.82;
+      if (net <= 10000000) return net / 0.78;
+      if (net <= 15000000) return net / 0.74;
+      return net / 0.70;
+    };
+
+    const grossAnnual = estimateGross(netAnnual);
+    const previousSalary = Math.round(grossAnnual / 12);
+
+    /**
+     * Estimate Taxable Income (課税所得) from Gross Annual.
+     * Gross - (Employment Income Deduction + Social Insurance + Personal Deductions)
+     * @param {number} gross - Annual gross income.
+     * @returns {number} Estimated taxable income.
+     */
+    const estimateTaxable = (gross) => {
+      // 1. Employment Income Deduction (給与所得控除) - 2024 scale
+      let kojo = 0;
+      if (gross <= 1625000) kojo = 550000;
+      else if (gross <= 1800000) kojo = gross * 0.4 - 100000;
+      else if (gross <= 3600000) kojo = gross * 0.3 + 80000;
+      else if (gross <= 6600000) kojo = gross * 0.2 + 440000;
+      else if (gross <= 8500000) kojo = gross * 0.1 + 1100000;
+      else kojo = 1950000;
+
+      // 2. Social Insurance (社会保険料) - Approx 15% capped
+      const shaho = Math.min(gross * 0.15, 2000000);
+
+      // 3. Personal Deductions (人的控除)
+      // Basic 480k + Spouse 380k + Dependents 380k each
+      let personal = 480000;
+      if (householdType.value === "couple" || householdType.value === "family") {
+        personal += 380000; // Spouse
+      }
+      if (householdType.value === "family") {
+        personal += dependentBirthDates.value.length * 380000;
+      }
+
+      return Math.max(0, gross - kojo - shaho - personal);
+    };
+
+    const taxableIncome = Math.round(estimateTaxable(grossAnnual));
 
     const payload = {
       birthYear,
