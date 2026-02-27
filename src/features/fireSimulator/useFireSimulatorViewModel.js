@@ -585,24 +585,49 @@ export function useFireSimulatorViewModel() {
     }
 
     // More accurate estimation logic
+    const netMonthly = manualRegularMonthlyIncome.value;
     const netAnnual = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
 
     /**
-     * Estimate Gross Annual from Net Annual.
-     * Net is roughly Gross * (0.85 to 0.7 depending on bracket).
-     * @param {number} net - Annual net income.
-     * @returns {number} Estimated annual gross income.
+     * 手取り月収から額面月収をざっくり推定する
+     * @param {number} netMonthly - 手取り月収（円）
+     * @param {boolean} isOver40 - 40歳以上かどうか（介護保険料の影響）
+     * @returns {number} grossMonthly - 推定額面月収（円）
      */
-    const estimateGross = (net) => {
-      if (net <= 3000000) return net / 0.85;
-      if (net <= 6000000) return net / 0.82;
-      if (net <= 10000000) return net / 0.78;
-      if (net <= 15000000) return net / 0.74;
-      return net / 0.70;
+    const estimateGrossMonthly = (val, isOver40 = false) => {
+      // 40歳以上は介護保険料（約1%）が追加で引かれるため、係数を少し下げる
+      const ageFactor = isOver40 ? 0.01 : 0;
+
+      // 手取り額に応じた推定「手取り率」の分岐
+      if (val <= 200000) {
+        // 低所得層：所得税がほぼかからず、社会保険料（約15%）がメイン
+        return val / (0.85 - ageFactor);
+      }
+
+      if (val <= 500000) {
+        // 中間層：社会保険(15%) + 所得税(2~5%) + 住民税(5%)
+        // 住民税は前年所得ベースだが、概算として計上
+        return val / (0.80 - ageFactor);
+      }
+
+      if (val <= 1000000) {
+        // 高所得層：所得税の累進課税が効き始める（税率10~20%ゾーン）
+        return val / (0.75 - ageFactor);
+      }
+
+      if (val <= 2000000) {
+        // 超高所得層：所得税率が跳ね上がる（税率33%〜）
+        return val / (0.65 - ageFactor);
+      }
+
+      // それ以上（役員報酬クラス）：手取り率は6割を切ることもある
+      return val / (0.60 - ageFactor);
     };
 
-    const grossAnnual = estimateGross(netAnnual);
-    const previousSalary = Math.round(grossAnnual / 12);
+    const grossMonthly = estimateGrossMonthly(netMonthly, currentAge.value >= 40);
+    const previousSalary = Math.round(grossMonthly);
+
+    const grossAnnual = previousSalary * 12 + Math.round(manualAnnualBonus.value / (grossMonthly > 0 ? (netMonthly / grossMonthly) : 0.8));
 
     /**
      * Estimate Taxable Income (課税所得) from Gross Annual.
