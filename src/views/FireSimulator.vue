@@ -56,6 +56,7 @@ const {
   algorithmExplanationSegments,
   copyConditionsAndAlgorithm,
   copyAnnualTable,
+  microCorpLink,
   downloadAnnualTableCsv,
   mortgagePayoffAge,
   dependentIndependenceAges,
@@ -331,7 +332,7 @@ const commitBasicReduction = () => {
 
       <div class="copy-actions" style="gap: 8px;">
         <a
-          href="https://freddiefujiwara.com/micro-corp/N4IgRglgTgLgFgTQKYEMogFwEYCcB2HAGhABMkAHJAOzKpgGdMAmY8qJANwgHsBXegMooANmgCemHAA4ArFIAM84jBQAPFGGFIAklQDG3ALZJMWGXjzypAZgBsxQ9zpxhYgEpJDvKkigoYPFSmiiHEBlDk3H4wSABiEKpIJADC3PQwmJYhAL5AA"
+          :href="microCorpLink"
           target="_blank"
           class="pill-btn"
           style="text-decoration: none;"

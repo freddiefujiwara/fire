@@ -572,6 +572,24 @@ export function useFireSimulatorViewModel() {
    */
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
+  const microCorpLink = computed(() => {
+    const birthYear = new Date(userBirthDate.value).getFullYear();
+    const dependents = dependentBirthDates.value.length;
+    const previousSalary = manualRegularMonthlyIncome.value;
+    const taxableIncome = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
+
+    const payload = {
+      birthYear,
+      dependents,
+      previousSalary,
+      taxableIncome,
+      monthlyRemuneration: 100000,
+      corporateFixedCost: 70000,
+    };
+
+    return `https://freddiefujiwara.com/micro-corp/${encode(payload)}`;
+  });
+
   /**
    * Generate and download the annual table as a CSV file.
    * @param {void} _unused - This function does not take input.
@@ -733,6 +751,7 @@ export function useFireSimulatorViewModel() {
     algorithmExplanationSegments,
     copyConditionsAndAlgorithm,
     copyAnnualTable,
+    microCorpLink,
     downloadAnnualTableCsv,
     mortgageOptions: computed(() => createMortgageOptions()),
     mortgagePayoffAge,
