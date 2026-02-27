@@ -334,14 +334,15 @@ describe("useFireSimulatorViewModel", () => {
       // previousSalary = 506,329
       expect(decoded.previousSalary).toBe(506329);
 
-      // grossAnnual = 506,329 * 12 + round(1,000,000 / (400k / 506329))
-      // grossAnnual = 6,075,948 + 1,265,823 = 7,341,771
-      // estimateTaxable(7,341,771)
-      // kojo = 7,341,771 * 0.1 + 1,100,000 = 1,834,177
-      // shaho = 7,341,771 * 0.15 = 1,101,266
-      // personal = 480k + 380k + 380k = 1,240,000
-      // taxable = 7,341,771 - 1,834,177 - 1,101,266 - 1,240,000 = 3,166,328
-      expect(decoded.taxableIncome).toBe(3166328);
+      // estimateTaxableIncome(400,000, 1,000,000/400,000 = 2.5)
+      // grossMonthly = 400,000 / 0.8 = 500,000
+      // grossAnnual = 500,000 * (12 + 2.5) = 7,250,000
+      // salaryDeduction = 7,250,000 * 0.1 + 1,100,000 = 725,000 + 1,100,000 = 1,825,000
+      // salaryIncome = 7,250,000 - 1,825,000 = 5,425,000
+      // socialInsurance = 7,250,000 * 0.15 = 1,087,500
+      // basicDeduction = 550,000
+      // taxableIncome = 5,425,000 - 1,087,500 - 550,000 = 3,787,500
+      expect(decoded.taxableIncome).toBe(3787500);
     });
   });
 });

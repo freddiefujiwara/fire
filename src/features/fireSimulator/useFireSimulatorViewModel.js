@@ -627,41 +627,48 @@ export function useFireSimulatorViewModel() {
     const grossMonthly = estimateGrossMonthly(netMonthly, currentAge.value >= 40);
     const previousSalary = Math.round(grossMonthly);
 
-    const grossAnnual = previousSalary * 12 + Math.round(manualAnnualBonus.value / (grossMonthly > 0 ? (netMonthly / grossMonthly) : 0.8));
-
     /**
-     * Estimate Taxable Income (課税所得) from Gross Annual.
-     * Gross - (Employment Income Deduction + Social Insurance + Personal Deductions)
-     * @param {number} gross - Annual gross income.
-     * @returns {number} Estimated taxable income.
+     * 手取り月収から源泉徴収票の「課税所得」を予測する
+     * @param {number} val - 手取り月収（円）
+     * @param {number} bonusMonths - 年間のボーナス合計（月数分。例: 4ヶ月分なら 4）
+     * @returns {Object} - 推定結果（額面年収、給与所得、課税所得）
      */
-    const estimateTaxable = (gross) => {
-      // 1. Employment Income Deduction (給与所得控除) - 2024 scale
-      let kojo = 0;
-      if (gross <= 1625000) kojo = 550000;
-      else if (gross <= 1800000) kojo = gross * 0.4 - 100000;
-      else if (gross <= 3600000) kojo = gross * 0.3 + 80000;
-      else if (gross <= 6600000) kojo = gross * 0.2 + 440000;
-      else if (gross <= 8500000) kojo = gross * 0.1 + 1100000;
-      else kojo = 1950000;
+    const estimateTaxableIncome = (val, bonusMonths = 0) => {
+      // 1. 手取り月収から「額面月収」を逆算（簡易係数：0.8を使用）
+      const gMonthly = val / 0.8;
 
-      // 2. Social Insurance (社会保険料) - Approx 15% capped
-      const shaho = Math.min(gross * 0.15, 2000000);
+      // 2. 額面年収（Gross Annual Income）
+      const gAnnual = gMonthly * (12 + bonusMonths);
 
-      // 3. Personal Deductions (人的控除)
-      // Basic 480k + Spouse 380k + Dependents 380k each
-      let personal = 480000;
-      if (householdType.value === "couple" || householdType.value === "family") {
-        personal += 380000; // Spouse
-      }
-      if (householdType.value === "family") {
-        personal += dependentBirthDates.value.length * 380000;
+      // 3. 給与所得控除（2026年想定：概算）の計算
+      let salaryDeduction = 0;
+      if (gAnnual <= 1800000) {
+        salaryDeduction = gAnnual * 0.4 - 100000;
+      } else if (gAnnual <= 3600000) {
+        salaryDeduction = gAnnual * 0.3 + 80000;
+      } else if (gAnnual <= 6600000) {
+        salaryDeduction = gAnnual * 0.2 + 440000;
+      } else if (gAnnual <= 8500000) {
+        salaryDeduction = gAnnual * 0.1 + 1100000;
+      } else {
+        salaryDeduction = 1950000; // 上限
       }
 
-      return Math.max(0, gross - kojo - shaho - personal);
+      // 給与所得（額面 - 給与所得控除）
+      const salaryIncome = Math.max(0, gAnnual - salaryDeduction);
+
+      // 4. 所得控除（社会保険料 + 基礎控除など）
+      const socialInsurance = gAnnual * 0.15;
+      const basicDeduction = 550000;
+
+      // 5. 課税所得（Taxable Income）の算出
+      const tIncome = Math.max(0, salaryIncome - socialInsurance - basicDeduction);
+
+      return Math.round(tIncome);
     };
 
-    const taxableIncome = Math.round(estimateTaxable(grossAnnual));
+    const bMonths = netMonthly > 0 ? manualAnnualBonus.value / netMonthly : 0;
+    const taxableIncome = estimateTaxableIncome(netMonthly, bMonths);
 
     const payload = {
       birthYear,
