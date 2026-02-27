@@ -329,7 +329,15 @@ const commitBasicReduction = () => {
         </div>
       </div>
 
-      <div class="copy-actions">
+      <div class="copy-actions" style="gap: 8px;">
+        <a
+          href="https://freddiefujiwara.com/micro-corp/N4IgRglgTgLgFgTQKYEMogFwEYCcB2HAGhABMkAHJAOzKpgGdMAmY8qJANwgHsBXegMooANmgCemHAA4ArFIAM84jBQAPFGGFIAklQDG3ALZJMWGXjzypAZgBsxQ9zpxhYgEpJDvKkigoYPFSmiiHEBlDk3H4wSABiEKpIJADC3PQwmJYhAL5AA"
+          target="_blank"
+          class="pill-btn"
+          style="text-decoration: none;"
+        >
+          マイクロ法人シミュレーション
+        </a>
         <CopyButton
           label="📋 条件とアルゴリズムをコピー"
           :copy-value="copyConditionsAndAlgorithm"
