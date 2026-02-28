@@ -79,9 +79,9 @@ const {
 const uiStore = useUiStore();
 const isPrivacyMode = computed(() => uiStore.privacyMode);
 
-const onMicroCorpLinkClick = (event) => {
-  if (!isPrivacyMode.value) return;
-  event.preventDefault();
+const openMicroCorpSimulation = () => {
+  if (isPrivacyMode.value) return;
+  window.open(microCorpLink.value, "_blank", "noopener,noreferrer");
 };
 
 const simulationEndAgePreview = ref(simulationEndAge.value);
@@ -340,19 +340,16 @@ const commitBasicReduction = () => {
       </div>
 
       <div class="copy-actions">
-        <a
-          :href="isPrivacyMode ? undefined : microCorpLink"
-          target="_blank"
+        <button
+          type="button"
           class="pill-btn"
-          :class="{ 'is-disabled-link': isPrivacyMode }"
-          :aria-disabled="isPrivacyMode"
+          :disabled="isPrivacyMode"
           :title="isPrivacyMode ? '閲覧するにはモザイクを解除してください' : ''"
-          :tabindex="isPrivacyMode ? -1 : 0"
           style="text-decoration: none;"
-          @click="onMicroCorpLinkClick"
+          @click="openMicroCorpSimulation"
         >
           マイクロ法人シミュレーション
-        </a>
+        </button>
         <CopyButton
           label="📋 条件とアルゴリズムをコピー"
           :copy-value="copyConditionsAndAlgorithm"
@@ -847,9 +844,8 @@ const commitBasicReduction = () => {
   margin-top: 12px;
 }
 
-.is-disabled-link {
+.pill-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  pointer-events: none;
 }
 </style>
