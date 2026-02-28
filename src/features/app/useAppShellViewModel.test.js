@@ -28,7 +28,7 @@ describe("useAppShellViewModel", () => {
 
   it("exposes header actions", () => {
     const vm = useAppShellViewModel();
-    expect(vm.themeLabel.value).toBe("ライト");
+    expect(vm.theme.value).toBe("dark");
     expect(typeof vm.toggleTheme).toBe("function");
     expect(typeof vm.togglePrivacy).toBe("function");
   });
