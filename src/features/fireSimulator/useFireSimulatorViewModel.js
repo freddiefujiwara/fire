@@ -572,6 +572,116 @@ export function useFireSimulatorViewModel() {
    */
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
+  const microCorpLink = computed(() => {
+    const birthYear = new Date(userBirthDate.value).getFullYear();
+
+    // Dependents = Spouse (if any) + Children
+    let dependents = 0;
+    if (householdType.value === "couple" || householdType.value === "family") {
+      dependents += 1; // Spouse
+    }
+    if (householdType.value === "family") {
+      dependents += dependentBirthDates.value.length;
+    }
+
+    // More accurate estimation logic
+    const netMonthly = manualRegularMonthlyIncome.value;
+    const netAnnual = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
+
+    /**
+     * 手取り月収から額面月収をざっくり推定する
+     * @param {number} netMonthly - 手取り月収（円）
+     * @param {boolean} isOver40 - 40歳以上かどうか（介護保険料の影響）
+     * @returns {number} grossMonthly - 推定額面月収（円）
+     */
+    const estimateGrossMonthly = (val, isOver40 = false) => {
+      // 40歳以上は介護保険料（約1%）が追加で引かれるため、係数を少し下げる
+      const ageFactor = isOver40 ? 0.01 : 0;
+
+      // 手取り額に応じた推定「手取り率」の分岐
+      if (val <= 200000) {
+        // 低所得層：所得税がほぼかからず、社会保険料（約15%）がメイン
+        return val / (0.85 - ageFactor);
+      }
+
+      if (val <= 500000) {
+        // 中間層：社会保険(15%) + 所得税(2~5%) + 住民税(5%)
+        // 住民税は前年所得ベースだが、概算として計上
+        return val / (0.80 - ageFactor);
+      }
+
+      if (val <= 1000000) {
+        // 高所得層：所得税の累進課税が効き始める（税率10~20%ゾーン）
+        return val / (0.75 - ageFactor);
+      }
+
+      if (val <= 2000000) {
+        // 超高所得層：所得税率が跳ね上がる（税率33%〜）
+        return val / (0.65 - ageFactor);
+      }
+
+      // それ以上（役員報酬クラス）：手取り率は6割を切ることもある
+      return val / (0.60 - ageFactor);
+    };
+
+    const grossMonthly = estimateGrossMonthly(netMonthly, currentAge.value >= 40);
+    const previousSalary = Math.round(grossMonthly);
+
+    /**
+     * 手取り月収から源泉徴収票の「課税所得」を予測する
+     * @param {number} val - 手取り月収（円）
+     * @param {number} bonusMonths - 年間のボーナス合計（月数分。例: 4ヶ月分なら 4）
+     * @returns {Object} - 推定結果（額面年収、給与所得、課税所得）
+     */
+    const estimateTaxableIncome = (val, bonusMonths = 0) => {
+      // 1. 手取り月収から「額面月収」を逆算（簡易係数：0.8を使用）
+      const gMonthly = val / 0.8;
+
+      // 2. 額面年収（Gross Annual Income）
+      const gAnnual = gMonthly * (12 + bonusMonths);
+
+      // 3. 給与所得控除（2026年想定：概算）の計算
+      let salaryDeduction = 0;
+      if (gAnnual <= 1800000) {
+        salaryDeduction = gAnnual * 0.4 - 100000;
+      } else if (gAnnual <= 3600000) {
+        salaryDeduction = gAnnual * 0.3 + 80000;
+      } else if (gAnnual <= 6600000) {
+        salaryDeduction = gAnnual * 0.2 + 440000;
+      } else if (gAnnual <= 8500000) {
+        salaryDeduction = gAnnual * 0.1 + 1100000;
+      } else {
+        salaryDeduction = 1950000; // 上限
+      }
+
+      // 給与所得（額面 - 給与所得控除）
+      const salaryIncome = Math.max(0, gAnnual - salaryDeduction);
+
+      // 4. 所得控除（社会保険料 + 基礎控除など）
+      const socialInsurance = gAnnual * 0.15;
+      const basicDeduction = 550000;
+
+      // 5. 課税所得（Taxable Income）の算出
+      const tIncome = Math.max(0, salaryIncome - socialInsurance - basicDeduction);
+
+      return Math.round(tIncome);
+    };
+
+    const bMonths = netMonthly > 0 ? manualAnnualBonus.value / netMonthly : 0;
+    const taxableIncome = estimateTaxableIncome(netMonthly, bMonths);
+
+    const payload = {
+      birthYear,
+      dependents,
+      previousSalary,
+      taxableIncome,
+      monthlyRemuneration: 100000,
+      corporateFixedCost: 70000,
+    };
+
+    return `https://freddiefujiwara.com/micro-corp/${encode(payload)}`;
+  });
+
   /**
    * Generate and download the annual table as a CSV file.
    * @param {void} _unused - This function does not take input.
@@ -733,6 +843,7 @@ export function useFireSimulatorViewModel() {
     algorithmExplanationSegments,
     copyConditionsAndAlgorithm,
     copyAnnualTable,
+    microCorpLink,
     downloadAnnualTableCsv,
     mortgageOptions: computed(() => createMortgageOptions()),
     mortgagePayoffAge,

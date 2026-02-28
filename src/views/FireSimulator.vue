@@ -56,6 +56,7 @@ const {
   algorithmExplanationSegments,
   copyConditionsAndAlgorithm,
   copyAnnualTable,
+  microCorpLink,
   downloadAnnualTableCsv,
   mortgagePayoffAge,
   dependentIndependenceAges,
@@ -329,7 +330,15 @@ const commitBasicReduction = () => {
         </div>
       </div>
 
-      <div class="copy-actions">
+      <div class="copy-actions" style="gap: 8px;">
+        <a
+          :href="microCorpLink"
+          target="_blank"
+          class="pill-btn"
+          style="text-decoration: none;"
+        >
+          マイクロ法人シミュレーション
+        </a>
         <CopyButton
           label="📋 条件とアルゴリズムをコピー"
           :copy-value="copyConditionsAndAlgorithm"
