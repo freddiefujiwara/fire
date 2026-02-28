@@ -6,14 +6,13 @@ const THEME_STORAGE_KEY = "fire-theme";
 /**
  * Manage app shell state for theme and privacy.
  * @param {void} _unused - This function does not take input.
- * @returns {{themeLabel: import('vue').ComputedRef<string>, privacyLabel: import('vue').ComputedRef<string>, togglePrivacy: () => void, toggleTheme: () => void}} View model values and actions for the app shell.
+ * @returns {{theme: import('vue').Ref<string>, privacyLabel: import('vue').ComputedRef<string>, togglePrivacy: () => void, toggleTheme: () => void}} View model values and actions for the app shell.
  */
 export function useAppShellViewModel() {
   const theme = ref("dark");
   const uiStore = useUiStore();
 
   const isDark = computed(() => theme.value === "dark");
-  const themeLabel = computed(() => (isDark.value ? "ライト" : "ダーク"));
   const privacyLabel = computed(() => (uiStore.privacyMode ? "金額表示" : "金額モザイク"));
 
   /**
@@ -52,7 +51,9 @@ export function useAppShellViewModel() {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (savedTheme === "light" || savedTheme === "dark") {
       theme.value = savedTheme;
-
+    } else {
+      const preferredLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      theme.value = preferredLight ? "light" : "dark";
     }
 
     applyTheme(theme.value);
@@ -71,7 +72,7 @@ export function useAppShellViewModel() {
   });
 
   return {
-    themeLabel,
+    theme,
     privacyLabel,
     togglePrivacy,
     toggleTheme,

@@ -32,6 +32,22 @@ describe("App integration", () => {
     });
 
     localStorage.clear();
+
+    // Mock window.matchMedia
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+
     Object.assign(navigator, {
       share: undefined,
       clipboard: {
@@ -65,7 +81,11 @@ describe("App integration", () => {
     });
 
     const buttons = wrapper.findAll(".header-buttons .theme-toggle");
-    await buttons[2].trigger("click");
+    // buttons[0]: Reset
+    // buttons[1]: Theme toggle
+    // buttons[2]: Privacy toggle
+    // buttons[3]: Share button
+    await buttons[3].trigger("click");
 
     expect(wrapper.text()).toContain("共有前の確認");
     expect(wrapper.text()).toContain("入力値");
