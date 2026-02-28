@@ -593,12 +593,11 @@ export function useFireSimulatorViewModel() {
       dependents += 1; // Spouse
     }
     if (householdType.value === "family") {
-      dependents += dependentBirthDates.value.length;
+      dependents += dependentBirthDates.value.filter(Boolean).length;
     }
 
     // More accurate estimation logic
     const netMonthly = manualRegularMonthlyIncome.value;
-    const netAnnual = manualRegularMonthlyIncome.value * 12 + manualAnnualBonus.value;
 
     /**
      * 手取り月収から額面月収をざっくり推定する
@@ -681,7 +680,7 @@ export function useFireSimulatorViewModel() {
       return Math.round(tIncome);
     };
 
-    const taxableIncome = estimateTaxableIncome(grossMonthly, manualAnnualBonus.value);
+    const taxableIncome = estimateTaxableIncome(grossMonthly, annualBonus.value);
 
     const payload = {
       birthYear,

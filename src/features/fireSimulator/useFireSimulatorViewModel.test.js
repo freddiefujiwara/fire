@@ -290,6 +290,19 @@ describe("useFireSimulatorViewModel", () => {
       expect(decoded.dependents).toBe(2); // 1 Spouse + 1 Child
     });
 
+    it("ignores empty child birth dates when counting dependents", async () => {
+      const vm = useFireSimulatorViewModel();
+      vm.householdType.value = "family";
+      vm.dependentBirthDates.value = ["2012-09-09", "", null];
+      await nextTick();
+
+      const { decode } = await import("@/domain/fire/url");
+      const encoded = vm.microCorpLink.value.split("/").pop();
+      const decoded = decode(encoded);
+
+      expect(decoded.dependents).toBe(2); // 1 Spouse + 1 valid Child
+    });
+
     it("generates dynamic link with 0 dependents for single", async () => {
       const vm = useFireSimulatorViewModel();
       vm.householdType.value = "single";
@@ -314,6 +327,20 @@ describe("useFireSimulatorViewModel", () => {
       expect(decoded.dependents).toBe(1);
     });
 
+
+    it("does not include bonus in micro-corp payload when bonus is disabled", async () => {
+      const vm = useFireSimulatorViewModel();
+      vm.includeBonus.value = false;
+      vm.manualRegularMonthlyIncome.value = 400000;
+      vm.manualAnnualBonus.value = 1000000;
+      await nextTick();
+
+      const { decode } = await import("@/domain/fire/url");
+      const encoded = vm.microCorpLink.value.split("/").pop();
+      const decoded = decode(encoded);
+
+      expect(decoded.taxableIncome).toBe(2959367);
+    });
     it("estimates gross salary and taxable income accurately", async () => {
       const vm = useFireSimulatorViewModel();
       // default birth date is 1980, so currentAge >= 44.

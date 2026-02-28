@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { RouterView, RouterLink } from "vue-router";
 import { useAppShellViewModel } from "@/features/app/useAppShellViewModel";
+import { useUiStore } from "@/stores/ui";
 
 const {
   theme,
@@ -9,6 +10,9 @@ const {
   togglePrivacy,
   toggleTheme,
 } = useAppShellViewModel();
+
+const uiStore = useUiStore();
+const isPrivacyMode = computed(() => uiStore.privacyMode);
 
 const isShareDialogOpen = ref(false);
 const shareStatusMessage = ref("");
@@ -61,7 +65,7 @@ const shareCurrentResult = async () => {
           <button class="theme-toggle" type="button" @click="togglePrivacy">
             {{ privacyLabel }}
           </button>
-          <button class="theme-toggle" type="button" @click="openShareDialog">
+          <button class="theme-toggle" type="button" @click="openShareDialog" :disabled="isPrivacyMode" :title="isPrivacyMode ? '共有するにはモザイクを解除してください' : ''">
             共有する
           </button>
         </div>

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useFireSimulatorViewModel } from "@/features/fireSimulator/useFireSimulatorViewModel";
 import NumericInput from "@/components/NumericInput.vue";
+import { useUiStore } from "@/stores/ui";
 
 const {
   formatYen,
@@ -74,6 +75,14 @@ const {
   isAnnualBonusManual,
   isPostFireFirstYearExtraExpenseManual,
 } = useFireSimulatorViewModel();
+
+const uiStore = useUiStore();
+const isPrivacyMode = computed(() => uiStore.privacyMode);
+
+const onMicroCorpLinkClick = (event) => {
+  if (!isPrivacyMode.value) return;
+  event.preventDefault();
+};
 
 const simulationEndAgePreview = ref(simulationEndAge.value);
 
@@ -332,10 +341,15 @@ const commitBasicReduction = () => {
 
       <div class="copy-actions">
         <a
-          :href="microCorpLink"
+          :href="isPrivacyMode ? undefined : microCorpLink"
           target="_blank"
           class="pill-btn"
+          :class="{ 'is-disabled-link': isPrivacyMode }"
+          :aria-disabled="isPrivacyMode"
+          :title="isPrivacyMode ? '閲覧するにはモザイクを解除してください' : ''"
+          :tabindex="isPrivacyMode ? -1 : 0"
           style="text-decoration: none;"
+          @click="onMicroCorpLinkClick"
         >
           マイクロ法人シミュレーション
         </a>
@@ -831,5 +845,11 @@ const commitBasicReduction = () => {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+
+.is-disabled-link {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 </style>
