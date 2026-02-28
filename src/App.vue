@@ -4,7 +4,7 @@ import { RouterView, RouterLink } from "vue-router";
 import { useAppShellViewModel } from "@/features/app/useAppShellViewModel";
 
 const {
-  themeLabel,
+  theme,
   privacyLabel,
   togglePrivacy,
   toggleTheme,
@@ -52,18 +52,18 @@ const shareCurrentResult = async () => {
       <h1>FIRE シミュレータ</h1>
       <div class="header-actions">
         <div class="header-buttons">
+          <RouterLink to="/" class="theme-toggle">
+            リセット
+          </RouterLink>
+          <button class="theme-toggle" type="button" @click="toggleTheme">
+            {{ theme === 'light' ? '🌙 ダーク' : '☀️ ライト' }}
+          </button>
           <button class="theme-toggle" type="button" @click="togglePrivacy">
             {{ privacyLabel }}
-          </button>
-          <button class="theme-toggle" type="button" @click="toggleTheme">
-            {{ themeLabel }}モードへ
           </button>
           <button class="theme-toggle" type="button" @click="openShareDialog">
             共有する
           </button>
-          <RouterLink to="/" class="theme-toggle" style="text-decoration: none;">
-            リセット
-          </RouterLink>
         </div>
       </div>
     </header>

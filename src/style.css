@@ -41,6 +41,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .layout {
@@ -52,7 +53,7 @@ body {
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -108,6 +109,17 @@ body {
   font: inherit;
   cursor: pointer;
   width: fit-content;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.theme-toggle:hover,
+.pill-btn:hover {
+  border-color: var(--primary);
 }
 
 .share-dialog-backdrop {

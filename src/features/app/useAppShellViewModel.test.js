@@ -9,11 +9,26 @@ describe("useAppShellViewModel", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
+
+    // Mock window.matchMedia
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
   it("exposes header actions", () => {
     const vm = useAppShellViewModel();
-    expect(vm.themeLabel.value).toBe("ライト");
+    expect(vm.theme.value).toBe("dark");
     expect(typeof vm.toggleTheme).toBe("function");
     expect(typeof vm.togglePrivacy).toBe("function");
   });
