@@ -406,6 +406,31 @@ describe("fire domain", () => {
       vi.useRealTimers();
     });
 
+    it("keeps independence year stable for YYYY-MM-DD birth dates near timezone boundaries", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-05-14T09:00:00+09:00"));
+
+      const result = performFireSimulation({
+        initialAssets: 100000000,
+        riskAssets: 0,
+        monthlyExpense: 150000,
+        currentAge: 45,
+        includeInflation: false,
+        includePension: false,
+        retirementLumpSumAtFire: 0,
+        withdrawalRate: 0,
+        maxMonths: 220,
+        householdType: "family",
+        dependentBirthDates: ["2013-01-01"],
+        independenceAge: 24,
+      }, { recordMonthly: true, forceFireMonth: 0 });
+
+      // 2013-01-01 生まれ -> 独立は 2037-04 固定（m143）
+      expect(result.monthlyData[142].expenses).toBe(150000);
+      expect(result.monthlyData[143].expenses).toBe(120000);
+      vi.useRealTimers();
+    });
+
 
     it("applies staged default reduction for 3 children after each independence", () => {
       vi.useFakeTimers();
