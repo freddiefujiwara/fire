@@ -593,7 +593,7 @@ export function useFireSimulatorViewModel() {
       dependents += 1; // Spouse
     }
     if (householdType.value === "family") {
-      dependents += dependentBirthDates.value.length;
+      dependents += dependentBirthDates.value.filter(Boolean).length;
     }
 
     // More accurate estimation logic
