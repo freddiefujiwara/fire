@@ -284,9 +284,20 @@ function getIndependenceMonthKeys(dependentBirthDates = [], independenceAge = 24
   if (!Array.isArray(dependentBirthDates)) return [];
   return dependentBirthDates
     .map((birthDateValue) => {
-      const birthDate = new Date(birthDateValue);
-      if (isNaN(birthDate.getTime())) return null;
-      const independenceDate = new Date(birthDate.getFullYear() + independenceAge, 3, 1);
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(birthDateValue ?? "").trim());
+      if (!match) return null;
+      const birthYear = Number(match[1]);
+      const birthMonth = Number(match[2]);
+      const birthDay = Number(match[3]);
+      const validatedDate = new Date(birthYear, birthMonth - 1, birthDay);
+      if (
+        validatedDate.getFullYear() !== birthYear
+        || validatedDate.getMonth() !== birthMonth - 1
+        || validatedDate.getDate() !== birthDay
+      ) {
+        return null;
+      }
+      const independenceDate = new Date(birthYear + independenceAge, 3, 1);
       return toMonthKey(independenceDate);
     })
     .filter(Boolean)

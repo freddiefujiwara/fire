@@ -385,10 +385,22 @@ export function useFireSimulatorViewModel() {
       .filter(Boolean)
       .slice(0, 3)
       .map((birthDate, index) => {
-        const birth = new Date(birthDate);
-        if (Number.isNaN(birth.getTime())) return null;
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(birthDate).trim());
+        if (!match) return null;
+        const birthYear = Number(match[1]);
+        const birthMonth = Number(match[2]);
+        const birthDay = Number(match[3]);
+        const validatedDate = new Date(birthYear, birthMonth - 1, birthDay);
+        if (
+          validatedDate.getFullYear() !== birthYear
+          || validatedDate.getMonth() !== birthMonth - 1
+          || validatedDate.getDate() !== birthDay
+        ) {
+          return null;
+        }
+
         return {
-          age: calculateAge(userBirthDate.value, new Date(birth.getFullYear() + independenceAge.value, 3, 1)),
+          age: calculateAge(userBirthDate.value, new Date(birthYear + independenceAge.value, 3, 1)),
           label: `子${index + 1}の独立`,
         };
       })
@@ -573,7 +585,7 @@ export function useFireSimulatorViewModel() {
   const copyAnnualTable = () => JSON.stringify(buildAnnualTableJson(annualSimulationData.value), null, 2);
 
   const microCorpLink = computed(() => {
-    const birthYear = new Date(userBirthDate.value).getFullYear();
+    const birthYear = Number.parseInt(String(userBirthDate.value).slice(0, 4), 10);
 
     // Dependents = Spouse (if any) + Children
     let dependents = 0;
