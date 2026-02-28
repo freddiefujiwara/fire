@@ -87,6 +87,8 @@ const isDownloadDisabled = computed(() => uiStore.privacyMode);
 .table-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .download-btn {
