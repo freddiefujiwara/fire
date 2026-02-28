@@ -629,16 +629,19 @@ export function useFireSimulatorViewModel() {
 
     /**
      * 手取り月収から源泉徴収票の「課税所得」を予測する
-     * @param {number} val - 手取り月収（円）
-     * @param {number} bonusMonths - 年間のボーナス合計（月数分。例: 4ヶ月分なら 4）
-     * @returns {Object} - 推定結果（額面年収、給与所得、課税所得）
+     * @param {number} netMonthly - 手取り月収（円）
+     * @param {number} netBonusAnnual - 手取りボーナス年額（円）
+     * @returns {number} 推定課税所得（円）
      */
-    const estimateTaxableIncome = (val, bonusMonths = 0) => {
-      // 1. 手取り月収から「額面月収」を逆算（簡易係数：0.8を使用）
-      const gMonthly = val / 0.8;
+    const estimateTaxableIncome = (netMonthly, netBonusAnnual = 0) => {
+      // 1. 手取りから「額面」を逆算（簡易係数：0.8を使用）
+      // 月収とボーナスそれぞれに対して額面を計算します
+      const gMonthly = netMonthly / 0.8;
+      const gBonusAnnual = netBonusAnnual / 0.8;
 
       // 2. 額面年収（Gross Annual Income）
-      const gAnnual = gMonthly * (12 + bonusMonths);
+      // 額面月収 × 12ヶ月 + 額面ボーナス年額
+      const gAnnual = (gMonthly * 12) + gBonusAnnual;
 
       // 3. 給与所得控除（2026年想定：概算）の計算
       let salaryDeduction = 0;
@@ -667,8 +670,7 @@ export function useFireSimulatorViewModel() {
       return Math.round(tIncome);
     };
 
-    const bMonths = netMonthly > 0 ? manualAnnualBonus.value / netMonthly : 0;
-    const taxableIncome = estimateTaxableIncome(netMonthly, bMonths);
+    const taxableIncome = estimateTaxableIncome(netMonthly, manualAnnualBonus.value);
 
     const payload = {
       birthYear,
