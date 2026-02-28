@@ -233,13 +233,13 @@ describe("useFireSimulatorViewModel", () => {
     const vm = useFireSimulatorViewModel();
     vm.manualRegularMonthlyIncome.value = 500000;
     await nextTick();
-    // DEFAULT_BONUS_RATIO = 2.5
-    expect(vm.manualAnnualBonus.value).toBe(500000 * 2.5);
+    // DEFAULT_BONUS_RATIO = 2
+    expect(vm.manualAnnualBonus.value).toBe(500000 * 2);
 
-    // Annual income = 500,000 * 12 + 1,250,000 = 7,250,000
+    // Annual income = 500,000 * 12 + 1,000,000 = 7,000,000
     // DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO = 0.1
-    // Extra = 725,000. Rounded to 10k: Math.round(725000 / 10000) * 10000 = 730000
-    expect(vm.manualPostFireFirstYearExtraExpense.value).toBe(730000);
+    // Extra = 700,000. Rounded to 10k: 700,000
+    expect(vm.manualPostFireFirstYearExtraExpense.value).toBe(700000);
 
     // Set manual flag
     vm.isAnnualBonusManual.value = true;
@@ -247,6 +247,21 @@ describe("useFireSimulatorViewModel", () => {
     vm.manualRegularMonthlyIncome.value = 1000000;
     await nextTick();
     expect(vm.manualAnnualBonus.value).toBe(2000000); // Remained manual value
+  });
+
+
+
+  it("calculates automatic bonus from the max month in income history", async () => {
+    const vm = useFireSimulatorViewModel();
+    vm.monthlyIncomeHistory.value = [
+      { income: 400000, oneTimeIncome: 50000 },
+      { income: 450000, oneTimeIncome: 500000 },
+      { "収入/一時所得": 600000 },
+    ];
+    await nextTick();
+
+    // max(450,000 + 500,000, 600,000) = 950,000, bonus = x2
+    expect(vm.manualAnnualBonus.value).toBe(1900000);
   });
 
   it("calls navigator.share when downloadAnnualTableCsv is called and sharing is supported", async () => {

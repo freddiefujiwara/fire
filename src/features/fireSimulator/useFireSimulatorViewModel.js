@@ -40,8 +40,48 @@ export function useFireSimulatorViewModel() {
   const route = useRoute();
 
   // Constants for auto-calculation
-  const DEFAULT_BONUS_RATIO = 2.5; // 1M bonus / 400k income
+  const DEFAULT_BONUS_RATIO = 2;
   const DEFAULT_FIRST_YEAR_EXTRA_EXPENSE_RATIO = 0.1; // 10% of annual income for tax/social insurance spike
+
+  /**
+   * Build annual bonus from the maximum monthly income snapshot.
+   * Priority: highest month of (income + one-time income) from history, then regular monthly income.
+   * @param {{regularMonthlyIncomeYen: number, monthlyIncomeHistory: Array<number|object>}} params - Bonus source inputs.
+   * @returns {number} Annual bonus in yen.
+   */
+  const calculateAutoAnnualBonus = ({ regularMonthlyIncomeYen, monthlyIncomeHistory }) => {
+    const toYen = (value) => {
+      const normalized = Number(value);
+      return Number.isFinite(normalized) ? normalized : 0;
+    };
+
+    const normalizedMonthlyHistory = Array.isArray(monthlyIncomeHistory)
+      ? monthlyIncomeHistory
+        .map((row) => {
+          if (typeof row === "number") {
+            return toYen(row);
+          }
+          if (!row || typeof row !== "object") {
+            return 0;
+          }
+
+          if (row["収入/一時所得"] !== undefined) {
+            return toYen(row["収入/一時所得"]);
+          }
+
+          const regularIncome = toYen(row.income ?? row.regularIncome ?? row["収入"]);
+          const oneTimeIncome = toYen(row.oneTimeIncome ?? row.temporaryIncome ?? row["一時所得"]);
+          return regularIncome + oneTimeIncome;
+        })
+        .filter((value) => Number.isFinite(value) && value > 0)
+      : [];
+
+    const baseMonthlyIncome = normalizedMonthlyHistory.length > 0
+      ? Math.max(...normalizedMonthlyHistory)
+      : toYen(regularMonthlyIncomeYen);
+
+    return Math.round(baseMonthlyIncome * DEFAULT_BONUS_RATIO);
+  };
 
   // New Configuration State
   const householdType = ref("family"); // single, couple, family
@@ -81,8 +121,14 @@ export function useFireSimulatorViewModel() {
 
   const manualMonthlyExpense = ref(300000);
   const manualRegularMonthlyIncome = ref(400000);
+  const monthlyIncomeHistory = ref([]);
 
-  const manualAnnualBonus = ref(manualRegularMonthlyIncome.value * DEFAULT_BONUS_RATIO);
+  const manualAnnualBonus = ref(
+    calculateAutoAnnualBonus({
+      regularMonthlyIncomeYen: manualRegularMonthlyIncome.value,
+      monthlyIncomeHistory: monthlyIncomeHistory.value,
+    }),
+  );
   const isAnnualBonusManual = ref(false);
 
   const manualPostFireFirstYearExtraExpense = ref(
@@ -125,6 +171,7 @@ export function useFireSimulatorViewModel() {
     mctsr: monteCarloTargetSuccessRate,
     mme: manualMonthlyExpense,
     mrmi: manualRegularMonthlyIncome,
+    mih: monthlyIncomeHistory,
     mab: manualAnnualBonus,
     mabm: isAnnualBonusManual,
     mmp: mortgageMonthlyPayment,
@@ -169,7 +216,8 @@ export function useFireSimulatorViewModel() {
     mctsr: 80,
     mme: 300000,
     mrmi: 400000,
-    mab: 1000000,
+    mih: [],
+    mab: 800000,
     mabm: false,
     mmp: 0,
     mpd: "",
@@ -261,11 +309,14 @@ export function useFireSimulatorViewModel() {
     dependentBirthDates.value.splice(index, 1);
   };
 
-  watch(manualRegularMonthlyIncome, (newVal) => {
+  watch([manualRegularMonthlyIncome, monthlyIncomeHistory], ([newVal, newHistory]) => {
     if (!isAnnualBonusManual.value) {
-      manualAnnualBonus.value = newVal * DEFAULT_BONUS_RATIO;
+      manualAnnualBonus.value = calculateAutoAnnualBonus({
+        regularMonthlyIncomeYen: newVal,
+        monthlyIncomeHistory: newHistory,
+      });
     }
-  });
+  }, { deep: true });
 
   watch([manualRegularMonthlyIncome, manualAnnualBonus], ([newIncome, newBonus]) => {
     if (!isPostFireFirstYearExtraExpenseManual.value) {
@@ -825,6 +876,7 @@ export function useFireSimulatorViewModel() {
     monthsOfCash,
     manualMonthlyExpense,
     manualRegularMonthlyIncome,
+    monthlyIncomeHistory,
     manualAnnualBonus,
     annualBonus,
     mortgageMonthlyPayment,
