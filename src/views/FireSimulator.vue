@@ -330,7 +330,7 @@ const commitBasicReduction = () => {
         </div>
       </div>
 
-      <div class="copy-actions" style="gap: 8px;">
+      <div class="copy-actions">
         <a
           :href="microCorpLink"
           target="_blank"
@@ -812,6 +812,14 @@ const commitBasicReduction = () => {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .copy-actions {
+    justify-content: center;
+  }
 }
 
 .table-copy-action {
