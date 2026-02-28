@@ -334,15 +334,16 @@ describe("useFireSimulatorViewModel", () => {
       // previousSalary = 506,329
       expect(decoded.previousSalary).toBe(506329);
 
-      // estimateTaxableIncome(400,000, 1,000,000/400,000 = 2.5)
-      // grossMonthly = 400,000 / 0.8 = 500,000
-      // grossAnnual = 500,000 * (12 + 2.5) = 7,250,000
-      // salaryDeduction = 7,250,000 * 0.1 + 1,100,000 = 725,000 + 1,100,000 = 1,825,000
-      // salaryIncome = 7,250,000 - 1,825,000 = 5,425,000
-      // socialInsurance = 7,250,000 * 0.15 = 1,087,500
+      // estimateTaxableIncome(grossMonthly, 1,000,000)
+      // grossMonthly = 506,329 (see previousSalary)
+      // grossBonusAnnual = 1,000,000 / 0.8 = 1,250,000
+      // grossAnnual = (506,329 * 12) + 1,250,000 = 7,325,948
+      // salaryDeduction = 7,325,948 * 0.1 + 1,100,000 = 1,832,594.8
+      // salaryIncome = 7,325,948 - 1,832,594.8 = 5,493,353.2
+      // socialInsurance = 7,325,948 * 0.15 = 1,098,892.2
       // basicDeduction = 550,000
-      // taxableIncome = 5,425,000 - 1,087,500 - 550,000 = 3,787,500
-      expect(decoded.taxableIncome).toBe(3787500);
+      // taxableIncome = 5,493,353.2 - 1,098,892.2 - 550,000 = 3,844,461
+      expect(decoded.taxableIncome).toBe(3844462);
     });
   });
 });
