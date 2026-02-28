@@ -628,15 +628,14 @@ export function useFireSimulatorViewModel() {
     const previousSalary = Math.round(grossMonthly);
 
     /**
-     * 手取り月収から源泉徴収票の「課税所得」を予測する
-     * @param {number} netMonthly - 手取り月収（円）
+     * 額面月収から源泉徴収票の「課税所得」を予測する
+     * @param {number} grossMonthlyIncome - 額面月収（円）
      * @param {number} netBonusAnnual - 手取りボーナス年額（円）
      * @returns {number} 推定課税所得（円）
      */
-    const estimateTaxableIncome = (netMonthly, netBonusAnnual = 0) => {
-      // 1. 手取りから「額面」を逆算（簡易係数：0.8を使用）
-      // 月収とボーナスそれぞれに対して額面を計算します
-      const gMonthly = netMonthly / 0.8;
+    const estimateTaxableIncome = (grossMonthlyIncome, netBonusAnnual = 0) => {
+      // 1. 額面ボーナス年額を逆算（簡易係数：0.8を使用）
+      const gMonthly = grossMonthlyIncome;
       const gBonusAnnual = netBonusAnnual / 0.8;
 
       // 2. 額面年収（Gross Annual Income）
@@ -670,7 +669,7 @@ export function useFireSimulatorViewModel() {
       return Math.round(tIncome);
     };
 
-    const taxableIncome = estimateTaxableIncome(netMonthly, manualAnnualBonus.value);
+    const taxableIncome = estimateTaxableIncome(grossMonthly, manualAnnualBonus.value);
 
     const payload = {
       birthYear,
