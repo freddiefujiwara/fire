@@ -350,6 +350,29 @@ describe("fire domain", () => {
       expect(result.table[0].requiredAssets).toBe(108000000);
     });
 
+    it("changes requiredAssets when switching withdrawalMode between max and min", () => {
+      const commonParams = {
+        ...params,
+        initialAssets: 500000000,
+        riskAssets: 0,
+        monthlyExpense: 120000,
+        annualReturnRate: 0,
+        includePension: false,
+        withdrawalRate: 0.08,
+      };
+
+      const maxModeResult = generateGrowthTable({
+        ...commonParams,
+        withdrawalMode: "max",
+      });
+      const minModeResult = generateGrowthTable({
+        ...commonParams,
+        withdrawalMode: "min",
+      });
+
+      expect(maxModeResult.table[0].requiredAssets).toBeGreaterThan(minModeResult.table[0].requiredAssets);
+    });
+
     it("handles tax impact when cash is negative in accumulation phase", () => {
       const result = generateGrowthTable({
         initialAssets: 1000, retirementLumpSumAtFire: 0,

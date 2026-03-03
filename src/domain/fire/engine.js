@@ -202,7 +202,12 @@ function calculateRequiredAssets({
     const A_case1 = (A / (1 + r)) + W_expense / (1 - t);
     const A_case2 = (A / (1 + r) - (P / (1 - t))) / (1 - (w / (1 - t)));
 
-    A = Math.max(A_case1, A_case2);
+    if (withdrawalMode === "min") {
+      const capRequiredAssets = w > 0 ? (W_expense / w) : (W_expense > 0 ? Number.POSITIVE_INFINITY : 0);
+      A = Math.max(A_case1, capRequiredAssets);
+    } else {
+      A = Math.max(A_case1, A_case2);
+    }
   }
 
   return Math.max(0, A);
