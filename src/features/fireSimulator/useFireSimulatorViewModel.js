@@ -66,6 +66,7 @@ export function useFireSimulatorViewModel() {
   const postFireExtraExpense = ref(60000);
   const retirementLumpSumAtFire = ref(5000000);
   const withdrawalRate = ref(4);
+  const withdrawalMode = ref("max");
   const includeBonus = ref(true);
   const simulationEndAge = ref(100);
 
@@ -116,6 +117,7 @@ export function useFireSimulatorViewModel() {
     mpffyee: manualPostFireFirstYearExtraExpense,
     mpffyeem: isPostFireFirstYearExtraExpenseManual,
     wr: withdrawalRate,
+    wm: withdrawalMode,
     ib: includeBonus,
     sea: simulationEndAge,
     umc: useMonteCarlo,
@@ -160,6 +162,7 @@ export function useFireSimulatorViewModel() {
     mpffyee: 580000,
     mpffyeem: false,
     wr: 4,
+    wm: "max",
     ib: true,
     sea: 100,
     umc: false,
@@ -330,6 +333,7 @@ export function useFireSimulatorViewModel() {
     includeTax: includeTax.value,
     taxRate: taxRate.value / 100,
     withdrawalRate: withdrawalRate.value / 100,
+    withdrawalMode: withdrawalMode.value,
     mortgageMonthlyPayment: mortgageMonthlyPayment.value,
     mortgagePayoffDate: mortgagePayoffDate.value || null,
     postFireExtraExpense: postFireExtraExpense.value,
@@ -429,6 +433,7 @@ export function useFireSimulatorViewModel() {
       fireAchievementAge: fireAchievementAge.value,
       pensionAnnualAtFire: pensionAnnualAtFire.value,
       withdrawalRatePct: withdrawalRate.value,
+      withdrawalMode: withdrawalMode.value,
       postFireExtraExpenseMonthly: postFireExtraExpense.value,
       postFireFirstYearExtraExpense: postFireFirstYearExtraExpense.value,
       retirementLumpSumAtFire: retirementLumpSumAtFire.value,
@@ -539,6 +544,7 @@ export function useFireSimulatorViewModel() {
     includeTax: includeTax.value,
     taxRatePercent: taxRate.value,
     withdrawalRatePercent: withdrawalRate.value,
+    withdrawalMode: withdrawalMode.value,
     postFireExtraExpenseMonthlyYen: postFireExtraExpense.value,
     postFireFirstYearExtraExpenseYen: postFireFirstYearExtraExpense.value,
     isPostFireFirstYearExtraExpenseManual: isPostFireFirstYearExtraExpenseManual.value,
@@ -812,6 +818,7 @@ export function useFireSimulatorViewModel() {
     retirementLumpSumAtFire,
     manualPostFireFirstYearExtraExpense,
     withdrawalRate,
+    withdrawalMode,
     includeBonus,
     simulationEndAge,
     useMonteCarlo,
