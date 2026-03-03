@@ -883,6 +883,27 @@ describe("fire domain", () => {
       expect(result[0].withdrawal).toBe(1200000);
     });
 
+    it("in min mode, uses carried cash first and withdraws only the deficit", () => {
+      const result = generateAnnualSimulation({
+        ...params,
+        initialAssets: 110000000,
+        riskAssets: 100000000,
+        monthlyIncome: 0,
+        monthlyExpense: 1000000,
+        annualReturnRate: 0,
+        withdrawalMode: "min",
+        withdrawalRate: 0.04,
+        retirementLumpSumAtFire: 0,
+      });
+
+      // Year 0 starts with 10M cash and 12M annual expenses.
+      // In min mode, only the 2M deficit should be withdrawn from risk assets.
+      expect(result[0].withdrawal).toBe(2000000);
+
+      // Year 1 cash is depleted, so full annual expenses are funded by risk withdrawals.
+      expect(result[1].withdrawal).toBe(12000000);
+    });
+
     it("tracks risk assets separately without forced rebalancing", () => {
       const result = generateAnnualSimulation({
         ...params,

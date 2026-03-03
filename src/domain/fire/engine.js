@@ -530,17 +530,23 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       const targetWithdrawalFromPortfolio = (assets * withdrawalRate) / 12;
       const expenseShortfall = Math.max(0, monthlyExpensesVal - incomeAvailable);
 
-      let netToTakeFromPortfolio = withdrawalMode === "min"
-        ? Math.min(expenseShortfall, targetWithdrawalFromPortfolio)
-        : Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
+      let neededFromRiskNet = 0;
+      if (withdrawalMode === "min") {
+        // In min mode, consume cash first and only withdraw enough from risk assets
+        // to prevent year/month-end cash from going negative.
+        const cashAfterFlow = currentCash + incomeAvailable - monthlyExpensesVal;
+        neededFromRiskNet = Math.max(0, -cashAfterFlow);
+      } else {
+        let netToTakeFromPortfolio = Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
 
-      // Force taking enough from assets to keep cash non-negative
-      const absoluteMinFromPortfolio = Math.max(0, expenseShortfall - currentCash);
-      netToTakeFromPortfolio = Math.max(netToTakeFromPortfolio, absoluteMinFromPortfolio);
+        // Force taking enough from assets to keep cash non-negative
+        const absoluteMinFromPortfolio = Math.max(0, expenseShortfall - currentCash);
+        netToTakeFromPortfolio = Math.max(netToTakeFromPortfolio, absoluteMinFromPortfolio);
 
-      // We use available cash FIRST to satisfy this target
-      const takenFromCash = Math.min(currentCash, netToTakeFromPortfolio);
-      const neededFromRiskNet = Math.max(0, netToTakeFromPortfolio - takenFromCash);
+        // We use available cash FIRST to satisfy this target
+        const takenFromCash = Math.min(currentCash, netToTakeFromPortfolio);
+        neededFromRiskNet = Math.max(0, netToTakeFromPortfolio - takenFromCash);
+      }
 
       const withdrawal = withdrawFromRiskAssets({
         neededNetAmount: neededFromRiskNet,
