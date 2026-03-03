@@ -573,6 +573,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       monthlyTaxes = withdrawal.taxes;
     }
 
+    const preGainCash = currentCash;
     const preGainRisk = currentRisk;
     investmentGain = currentRisk * returnRate;
     currentRisk += investmentGain;
@@ -584,10 +585,16 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         last.withdrawalGross = monthlyWithdrawalGross;
         last.withdrawal = monthlyWithdrawal;
         last.taxes = monthlyTaxes;
-        last.riskAssets = preGainRisk;
-        last.cashAssetsPreGain = Math.max(0, currentCash);
+
+        // Keep monthly snapshot fields aligned at month-end (after investment gain).
+        last.cashAssets = Math.max(0, currentCash);
+        last.riskAssets = Math.max(0, currentRisk);
+        last.assets = Math.max(0, currentCash + currentRisk);
+
+        // Pre-gain reference point (after cashflow/withdrawal, before investment gain).
+        last.cashAssetsPreGain = Math.max(0, preGainCash);
         last.riskAssetsPreGain = Math.max(0, preGainRisk);
-        last.assetsPreGain = Math.max(0, currentCash + preGainRisk);
+        last.assetsPreGain = Math.max(0, preGainCash + preGainRisk);
       }
     }
   }
