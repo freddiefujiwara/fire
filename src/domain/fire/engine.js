@@ -145,7 +145,7 @@ export function generateAlgorithmExplanationSegments(params) {
   segments.push(
     { type: "text", value: "\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: " },
     { type: "text", value: withdrawalMode === "min"
-      ? "生活費の不足分（現金残高を考慮した純増分）、または「資産 × 取崩率」のいずれか小さい額をリスク資産から引き出します。ただし、現金が不足する場合は、現金を0に維持するために上限（取崩率）を超えて不足分をすべて取り崩します。"
+      ? "生活費の不足分を、まず現金で充当し、なお足りない純不足分のみをリスク資産から取り崩します（取り崩し額は手取りベースで表示し、税額は別項目で表示）。"
       : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。既存の現金から優先的に支出し、不足分のみをリスク資産から取り崩します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります（税金考慮時は利益分のみグロスアップ）。"
     },
     { type: "text", value: "\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト" },
@@ -483,7 +483,11 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         pension: curPension,
         expenses: monthlyExpensesVal,
         investmentGain: 0,
+        withdrawalGross: 0,
         withdrawal: 0,
+        cashAssetsPreGain: Math.max(0, currentCash),
+        riskAssetsPreGain: Math.max(0, currentRisk),
+        assetsPreGain: Math.max(0, currentCash + currentRisk),
         lumpSum: monthlyLumpSum,
         taxes: 0,
       });
@@ -494,6 +498,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     currentCash += monthlyLumpSum;
 
     let monthlyWithdrawal = 0;
+    let monthlyWithdrawalGross = 0;
     let monthlyInvest = 0;
     let investmentGain = 0;
     let monthlyTaxes = 0;
@@ -517,7 +522,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         currentCostBasis = withdrawal.nextCostBasis;
 
         currentCash = cashAfterFlow + withdrawal.actualNetFromRisk;
-        monthlyWithdrawal = withdrawal.actualNetFromRisk > 0 ? withdrawal.grossFromRisk : 0;
+        monthlyWithdrawal = withdrawal.actualNetFromRisk;
+        monthlyWithdrawalGross = withdrawal.grossFromRisk;
         monthlyTaxes = withdrawal.taxes;
       } else {
         monthlyInvest = Math.min(monthlyInvestment, cashAfterFlow);
@@ -530,17 +536,23 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       const targetWithdrawalFromPortfolio = (assets * withdrawalRate) / 12;
       const expenseShortfall = Math.max(0, monthlyExpensesVal - incomeAvailable);
 
-      let netToTakeFromPortfolio = withdrawalMode === "min"
-        ? Math.min(expenseShortfall, targetWithdrawalFromPortfolio)
-        : Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
+      let neededFromRiskNet = 0;
+      if (withdrawalMode === "min") {
+        // In min mode, consume cash first and only withdraw enough from risk assets
+        // to prevent year/month-end cash from going negative.
+        const cashAfterFlow = currentCash + incomeAvailable - monthlyExpensesVal;
+        neededFromRiskNet = Math.max(0, -cashAfterFlow);
+      } else {
+        let netToTakeFromPortfolio = Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
 
-      // Force taking enough from assets to keep cash non-negative
-      const absoluteMinFromPortfolio = Math.max(0, expenseShortfall - currentCash);
-      netToTakeFromPortfolio = Math.max(netToTakeFromPortfolio, absoluteMinFromPortfolio);
+        // Force taking enough from assets to keep cash non-negative
+        const absoluteMinFromPortfolio = Math.max(0, expenseShortfall - currentCash);
+        netToTakeFromPortfolio = Math.max(netToTakeFromPortfolio, absoluteMinFromPortfolio);
 
-      // We use available cash FIRST to satisfy this target
-      const takenFromCash = Math.min(currentCash, netToTakeFromPortfolio);
-      const neededFromRiskNet = Math.max(0, netToTakeFromPortfolio - takenFromCash);
+        // We use available cash FIRST to satisfy this target
+        const takenFromCash = Math.min(currentCash, netToTakeFromPortfolio);
+        neededFromRiskNet = Math.max(0, netToTakeFromPortfolio - takenFromCash);
+      }
 
       const withdrawal = withdrawFromRiskAssets({
         neededNetAmount: neededFromRiskNet,
@@ -555,11 +567,13 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
       currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
 
-      // Withdrawal column now ONLY shows amount taken from RISK assets (gross)
-      monthlyWithdrawal = withdrawal.grossFromRisk;
+      // Withdrawal column shows net amount available for spending from risk assets.
+      monthlyWithdrawal = withdrawal.actualNetFromRisk;
+      monthlyWithdrawalGross = withdrawal.grossFromRisk;
       monthlyTaxes = withdrawal.taxes;
     }
 
+    const preGainCash = currentCash;
     const preGainRisk = currentRisk;
     investmentGain = currentRisk * returnRate;
     currentRisk += investmentGain;
@@ -568,9 +582,19 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       const last = monthlyData[monthlyData.length - 1];
       if (last) {
         last.investmentGain = investmentGain;
+        last.withdrawalGross = monthlyWithdrawalGross;
         last.withdrawal = monthlyWithdrawal;
         last.taxes = monthlyTaxes;
-        last.riskAssets = preGainRisk;
+
+        // Keep all snapshot fields aligned to month-end (after applying investment gain).
+        last.riskAssets = Math.max(0, currentRisk);
+        last.cashAssets = Math.max(0, currentCash);
+        last.assets = Math.max(0, currentCash + currentRisk);
+
+        // Keep pre-gain snapshots for debugging/accounting checks.
+        last.cashAssetsPreGain = Math.max(0, preGainCash);
+        last.riskAssetsPreGain = Math.max(0, preGainRisk);
+        last.assetsPreGain = Math.max(0, preGainCash + preGainRisk);
       }
     }
   }
@@ -693,6 +717,8 @@ export function generateAnnualSimulation(inputParams, options = {}) {
       income: Math.round(sumByField(slice, "income")),
       pension: Math.round(sumByField(slice, "pension")),
       expenses: Math.round(sumByField(slice, "expenses")),
+      withdrawalGross: Math.round(sumByField(slice, "withdrawalGross")),
+      withdrawalNet: Math.round(sumByField(slice, "withdrawal")),
       withdrawal: Math.round(sumByField(slice, "withdrawal")),
       investmentGain: Math.round(sumByField(slice, "investmentGain")),
       lumpSum: Math.round(sumByField(slice, "lumpSum")),
@@ -700,7 +726,9 @@ export function generateAnnualSimulation(inputParams, options = {}) {
       assets: Math.round(firstMonth.assets),
       assetsYearEnd: Math.round(nextYearFirstMonth.assets),
       riskAssets: Math.round(firstMonth.riskAssets),
+      riskAssetsYearEnd: Math.round(nextYearFirstMonth.riskAssets),
       cashAssets: Math.round(firstMonth.cashAssets),
+      cashAssetsYearEnd: Math.round(nextYearFirstMonth.cashAssets),
       savings: Math.round(nextYearFirstMonth.cashAssets - firstMonth.cashAssets),
       fireMonthInYear,
     });

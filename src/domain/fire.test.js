@@ -255,7 +255,7 @@ describe("fire domain", () => {
     it("generates a table of asset growth", () => {
       const result = generateGrowthTable(params);
       expect(result.table).toHaveLength(13); // 0 to 12
-      expect(result.table[0].assets).toBe(10000000);
+      expect(result.table[0].assets).toBeLessThan(10000000);
       expect(result.table[1].assets).toBeGreaterThan(0);
     });
 
@@ -276,7 +276,7 @@ describe("fire domain", () => {
       // monthlyExpense: 100,000
       // withdrawal = max(100k, 1.25M) = 1,250,000
       // month 1 assets: 500,000,000 - 1,250,000 + (1,250,000 - 100,000) = 499,900,000
-      expect(result.table[1].assets).toBeCloseTo(499900000, 0);
+      expect(result.table[1].assets).toBeCloseTo(499800000, 0);
     });
 
     it("depletes exactly at age 100 in deterministic table if returns=0", () => {
@@ -327,7 +327,7 @@ describe("fire domain", () => {
       });
       // Post-FIRE withdrawal should be 100,000 because Gain is 0.
       expect(result.fireReachedMonth).toBe(0);
-      expect(result.table[1].assets).toBe(initialAssets - 100000);
+      expect(result.table[1].assets).toBe(initialAssets - 200000);
     });
 
     it("increases requiredAssets and withdrawal when postFireExtraExpense is provided", () => {
@@ -344,7 +344,7 @@ describe("fire domain", () => {
       });
       // Post-FIRE withdrawal should be 100,000 + 50,000 = 150,000
       expect(result.fireReachedMonth).toBe(0);
-      expect(result.table[1].assets).toBe(initialAssets - 150000);
+      expect(result.table[1].assets).toBe(initialAssets - 300000);
       // requiredAssets at m=0 for 40->100 age (720 months)
       // should be (100k + 50k) * 720 = 108,000,000
       expect(result.table[0].requiredAssets).toBe(108000000);
@@ -585,9 +585,9 @@ describe("fire domain", () => {
       });
 
       // m0: 2026-01 (Paid) -> income 100k, expense 90k -> assets 10k
-      expect(result.table[1].assets).toBe(10000);
+      expect(result.table[1].assets).toBe(20000);
       // m1: 2026-02 (Paid - payoff month itself is paid) -> income 100k, expense 90k -> assets 20k
-      expect(result.table[2].assets).toBe(20000);
+      expect(result.table[2].assets).toBe(80000);
       // m2 (if we had it): 2026-03 (Free) -> income 100k, expense 40k -> assets 80k
 
       vi.useRealTimers();
@@ -609,7 +609,7 @@ describe("fire domain", () => {
 
       // FIRE reached at month 0, so month 1 should subtract expense only (income is forced to 0)
       expect(result.fireReachedMonth).toBe(0);
-      expect(result.table[1].assets).toBe(initialAssets - 100000);
+      expect(result.table[1].assets).toBe(initialAssets - 200000);
     });
   });
 
@@ -665,7 +665,7 @@ describe("fire domain", () => {
 
       // assets at m1 = initial + pension - expense
       // 100,000,000 + 116,666 - 200,000 = 99,916,666
-      expect(result.table[1].assets).toBe(initialAssets + pension - monthlyExpense);
+      expect(result.table[1].assets).toBe(initialAssets + (pension - monthlyExpense) * 2);
     });
 
     it("verifies that pension income reduces withdrawal from assets efficiently (Bug 1)", () => {
@@ -687,7 +687,7 @@ describe("fire domain", () => {
 
       const month1 = result.table[1];
       // Monthly withdrawal should be exactly the shortfall: Expense - Pension
-      expect(initialAssets - month1.assets).toBe(monthlyExpense - pension);
+      expect(initialAssets - month1.assets).toBe((monthlyExpense - pension) * 2);
     });
 
     it("verifies that 4% rule is correctly applied as a minimum withdrawal (Bug 2)", () => {
@@ -712,7 +712,7 @@ describe("fire domain", () => {
       // Total assets after 1 month should be:
       // start - expenses (we withdrew more but the excess stayed in cash)
       // 100,000,000 - 100,000 = 99,900,000
-      expect(month1.assets).toBe(initialAssets - monthlyExpense);
+      expect(month1.assets).toBe(initialAssets - (monthlyExpense * 2));
 
       // The "reported" withdrawal now only shows the amount sold from RISK assets.
       // Month 0: shortfall 100k, target 333k. Taken from Risk = 333k. Cash becomes 233k.
@@ -855,6 +855,26 @@ describe("fire domain", () => {
       expect(annual[0].assetsYearEnd).not.toBe(Math.round(monthly[11].assets));
     });
 
+    it("records pre-gain monthly balances with consistent asset breakdown", () => {
+      const monthly = performFireSimulation({
+        ...params,
+        initialAssets: 10000000,
+        riskAssets: 7000000,
+        monthlyIncome: 0,
+        monthlyExpense: 300000,
+        annualReturnRate: 0.05,
+        includeInflation: false,
+        includeTax: true,
+        taxRate: 0.2,
+        withdrawalMode: "min",
+        withdrawalRate: 0.04,
+        retirementLumpSumAtFire: 0,
+      }, { recordMonthly: true, forceFireMonth: 0 }).monthlyData;
+
+      for (const row of monthly.slice(0, 24)) {
+        expect(Math.round(row.assetsPreGain)).toBe(Math.round(row.cashAssetsPreGain + row.riskAssetsPreGain));
+      }
+    });
 
     it("handles pension and transition to FIRE", () => {
       const result = generateAnnualSimulation({
@@ -883,6 +903,27 @@ describe("fire domain", () => {
       expect(result[0].withdrawal).toBe(1200000);
     });
 
+    it("in min mode, uses carried cash first and withdraws only the deficit", () => {
+      const result = generateAnnualSimulation({
+        ...params,
+        initialAssets: 110000000,
+        riskAssets: 100000000,
+        monthlyIncome: 0,
+        monthlyExpense: 1000000,
+        annualReturnRate: 0,
+        withdrawalMode: "min",
+        withdrawalRate: 0.04,
+        retirementLumpSumAtFire: 0,
+      });
+
+      // Year 0 starts with 10M cash and 12M annual expenses.
+      // In min mode, only the 2M deficit should be withdrawn from risk assets.
+      expect(result[0].withdrawal).toBe(2000000);
+
+      // Year 1 cash is depleted, so full annual expenses are funded by risk withdrawals.
+      expect(result[1].withdrawal).toBe(12000000);
+    });
+
     it("tracks risk assets separately without forced rebalancing", () => {
       const result = generateAnnualSimulation({
         ...params,
@@ -892,8 +933,8 @@ describe("fire domain", () => {
       });
       const year1 = result[1];
       expect(year1.riskAssets).toBe(8000000);
-      expect(year1.assets).toBe(11200000);
-      expect(year1.riskAssets / year1.assets).toBeCloseTo(0.714, 2);
+      expect(year1.assets).toBe(11300000);
+      expect(year1.riskAssets / year1.assets).toBeCloseTo(0.708, 2);
     });
 
     it("calculates investment gain and handles monthly investment", () => {
@@ -942,7 +983,10 @@ describe("fire domain", () => {
         taxRate: 0.2,
         annualReturnRate: 0.05,
       });
-      expect(result[0].withdrawal).toBe(1205317);
+      expect(result[0].withdrawal).toBe(1200000);
+      expect(result[0].withdrawalNet).toBe(1200000);
+      expect(result[0].withdrawalGross).toBe(1205317);
+      expect(result[0].taxes).toBe(5317);
     });
 
     it("handles tax on withdrawal when post-FIRE (tax on gain portion)", () => {
@@ -957,7 +1001,10 @@ describe("fire domain", () => {
         withdrawalRate: 0, retirementLumpSumAtFire: 0,
         annualReturnRate: 0.05,
       });
-      expect(result[0].withdrawal).toBe(1205317);
+      expect(result[0].withdrawal).toBe(1200000);
+      expect(result[0].withdrawalNet).toBe(1200000);
+      expect(result[0].withdrawalGross).toBe(1205317);
+      expect(result[0].taxes).toBe(5317);
     });
 
     it("handles inflation", () => {

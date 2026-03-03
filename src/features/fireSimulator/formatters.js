@@ -218,9 +218,12 @@ export function buildAnnualTableJson(annualSimulationData) {
     expensesYen: row.expenses,
     investmentGainYen: row.investmentGain,
     withdrawalYen: row.withdrawal,
-    totalAssetsYen: row.assets,
-    savingsCashYen: row.cashAssets,
-    riskAssetsYen: row.riskAssets,
+    withdrawalNetYen: row.withdrawalNet ?? row.withdrawal,
+    withdrawalGrossYen: row.withdrawalGross ?? ((row.withdrawal ?? 0) + (row.taxes ?? 0)),
+    withdrawalTaxesYen: row.taxes ?? 0,
+    totalAssetsYen: row.assetsYearEnd ?? row.assets,
+    savingsCashYen: row.cashAssetsYearEnd ?? row.cashAssets,
+    riskAssetsYen: row.riskAssetsYearEnd ?? row.riskAssets,
   }));
 }
 
