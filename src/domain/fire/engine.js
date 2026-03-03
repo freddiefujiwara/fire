@@ -517,7 +517,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         currentCostBasis = withdrawal.nextCostBasis;
 
         currentCash = cashAfterFlow + withdrawal.actualNetFromRisk;
-        monthlyWithdrawal = withdrawal.actualNetFromRisk > 0 ? withdrawal.grossFromRisk : 0;
+        monthlyWithdrawal = withdrawal.actualNetFromRisk;
         monthlyTaxes = withdrawal.taxes;
       } else {
         monthlyInvest = Math.min(monthlyInvestment, cashAfterFlow);
@@ -561,8 +561,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
       currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
 
-      // Withdrawal column now ONLY shows amount taken from RISK assets (gross)
-      monthlyWithdrawal = withdrawal.grossFromRisk;
+      // Withdrawal column shows net amount available for spending from risk assets.
+      monthlyWithdrawal = withdrawal.actualNetFromRisk;
       monthlyTaxes = withdrawal.taxes;
     }
 

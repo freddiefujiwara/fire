@@ -963,7 +963,8 @@ describe("fire domain", () => {
         taxRate: 0.2,
         annualReturnRate: 0.05,
       });
-      expect(result[0].withdrawal).toBe(1205317);
+      expect(result[0].withdrawal).toBe(1200000);
+      expect(result[0].taxes).toBe(5317);
     });
 
     it("handles tax on withdrawal when post-FIRE (tax on gain portion)", () => {
@@ -978,7 +979,8 @@ describe("fire domain", () => {
         withdrawalRate: 0, retirementLumpSumAtFire: 0,
         annualReturnRate: 0.05,
       });
-      expect(result[0].withdrawal).toBe(1205317);
+      expect(result[0].withdrawal).toBe(1200000);
+      expect(result[0].taxes).toBe(5317);
     });
 
     it("handles inflation", () => {
