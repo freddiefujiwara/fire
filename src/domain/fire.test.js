@@ -855,6 +855,26 @@ describe("fire domain", () => {
       expect(annual[0].assetsYearEnd).not.toBe(Math.round(monthly[11].assets));
     });
 
+    it("records pre-gain monthly balances with consistent asset breakdown", () => {
+      const monthly = performFireSimulation({
+        ...params,
+        initialAssets: 10000000,
+        riskAssets: 7000000,
+        monthlyIncome: 0,
+        monthlyExpense: 300000,
+        annualReturnRate: 0.05,
+        includeInflation: false,
+        includeTax: true,
+        taxRate: 0.2,
+        withdrawalMode: "min",
+        withdrawalRate: 0.04,
+        retirementLumpSumAtFire: 0,
+      }, { recordMonthly: true, forceFireMonth: 0 }).monthlyData;
+
+      for (const row of monthly.slice(0, 24)) {
+        expect(Math.round(row.assetsPreGain)).toBe(Math.round(row.cashAssetsPreGain + row.riskAssetsPreGain));
+      }
+    });
 
     it("handles pension and transition to FIRE", () => {
       const result = generateAnnualSimulation({

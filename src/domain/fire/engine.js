@@ -485,6 +485,9 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         investmentGain: 0,
         withdrawalGross: 0,
         withdrawal: 0,
+        cashAssetsPreGain: Math.max(0, currentCash),
+        riskAssetsPreGain: Math.max(0, currentRisk),
+        assetsPreGain: Math.max(0, currentCash + currentRisk),
         lumpSum: monthlyLumpSum,
         taxes: 0,
       });
@@ -582,6 +585,9 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         last.withdrawal = monthlyWithdrawal;
         last.taxes = monthlyTaxes;
         last.riskAssets = preGainRisk;
+        last.cashAssetsPreGain = Math.max(0, currentCash);
+        last.riskAssetsPreGain = Math.max(0, preGainRisk);
+        last.assetsPreGain = Math.max(0, currentCash + preGainRisk);
       }
     }
   }
