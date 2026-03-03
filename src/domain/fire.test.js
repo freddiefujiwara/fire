@@ -964,6 +964,8 @@ describe("fire domain", () => {
         annualReturnRate: 0.05,
       });
       expect(result[0].withdrawal).toBe(1200000);
+      expect(result[0].withdrawalNet).toBe(1200000);
+      expect(result[0].withdrawalGross).toBe(1205317);
       expect(result[0].taxes).toBe(5317);
     });
 
@@ -980,6 +982,8 @@ describe("fire domain", () => {
         annualReturnRate: 0.05,
       });
       expect(result[0].withdrawal).toBe(1200000);
+      expect(result[0].withdrawalNet).toBe(1200000);
+      expect(result[0].withdrawalGross).toBe(1205317);
       expect(result[0].taxes).toBe(5317);
     });
 

@@ -131,5 +131,30 @@ describe("fireSimulator formatters", () => {
     expect(row.totalAssetsYen).toBe(48626293);
     expect(row.savingsCashYen).toBe(0);
     expect(row.riskAssetsYen).toBe(48626293);
+    expect(row.withdrawalNetYen).toBe(1373707);
+    expect(row.withdrawalGrossYen).toBe(1373707);
+    expect(row.withdrawalTaxesYen).toBe(0);
+  });
+
+  it("buildAnnualTableJson includes gross/net/tax breakdown for withdrawals", () => {
+    const [row] = buildAnnualTableJson([{
+      age: 56,
+      income: 0,
+      pension: 0,
+      expenses: 8296971,
+      investmentGain: 0,
+      withdrawal: 8296971,
+      withdrawalNet: 8296971,
+      withdrawalGross: 8941901,
+      taxes: 644930,
+      assets: 0,
+      cashAssets: 0,
+      riskAssets: 0,
+    }]);
+
+    expect(row.withdrawalYen).toBe(8296971);
+    expect(row.withdrawalNetYen).toBe(8296971);
+    expect(row.withdrawalGrossYen).toBe(8941901);
+    expect(row.withdrawalTaxesYen).toBe(644930);
   });
 });
