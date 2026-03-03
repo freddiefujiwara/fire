@@ -706,7 +706,9 @@ export function generateAnnualSimulation(inputParams, options = {}) {
       assets: Math.round(firstMonth.assets),
       assetsYearEnd: Math.round(nextYearFirstMonth.assets),
       riskAssets: Math.round(firstMonth.riskAssets),
+      riskAssetsYearEnd: Math.round(nextYearFirstMonth.riskAssets),
       cashAssets: Math.round(firstMonth.cashAssets),
+      cashAssetsYearEnd: Math.round(nextYearFirstMonth.cashAssets),
       savings: Math.round(nextYearFirstMonth.cashAssets - firstMonth.cashAssets),
       fireMonthInYear,
     });

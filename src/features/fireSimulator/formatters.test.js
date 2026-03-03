@@ -4,6 +4,7 @@ import {
   fireDate,
   formatMonths,
   buildConditionsAndAlgorithmJson,
+  buildAnnualTableJson,
 } from "./formatters";
 
 describe("fireSimulator formatters", () => {
@@ -109,5 +110,26 @@ describe("fireSimulator formatters", () => {
     expect(result.keyResults.pensionEstimates.spouseBasicMonthlyEquivalentYen).toBe(68000);
     expect(result.keyResults.pensionEstimates.spouseBasicMonthlyAtPensionEstimateAgeYen).toBe(68000);
     expect(result.algorithmExplanation).toBe("keep-this");
+  });
+
+  it("buildAnnualTableJson prefers year-end balances when available", () => {
+    const [row] = buildAnnualTableJson([{
+      age: 55,
+      income: 0,
+      pension: 0,
+      expenses: 8296971,
+      investmentGain: 0,
+      withdrawal: 1373707,
+      assets: 50000000,
+      assetsYearEnd: 48626293,
+      cashAssets: 6923264,
+      cashAssetsYearEnd: 0,
+      riskAssets: 43076736,
+      riskAssetsYearEnd: 48626293,
+    }]);
+
+    expect(row.totalAssetsYen).toBe(48626293);
+    expect(row.savingsCashYen).toBe(0);
+    expect(row.riskAssetsYen).toBe(48626293);
   });
 });
