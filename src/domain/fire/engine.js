@@ -55,8 +55,8 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "amount", value: formatYen(retirementLumpSumAtFire) },
     { type: "text", value: " が現金資産に加算されます。\n・FIRE達成後は、" },
     { type: "text", value: withdrawalMode === "min"
-      ? `支出を賄うのに不足する分だけ資産から取り崩します。ただし取り崩し額の上限は資産の${withdrawalRatePct}%（設定値）とします（現金が不足する場合は、現金を0に維持するため上限を超えて取り崩します）。`
-      : `年間支出または資産の${withdrawalRatePct}%（設定値）のいずれか大きい額を引き出すと仮定しています。余剰分は再投資されず現金に滞留します。`
+      ? `支出を賄うのに不足する分だけリスク資産から取り崩します（既存の現金も優先的に使用されます）。ただし取り崩し額の上限は資産の${withdrawalRatePct}%（設定値）とします（現金が不足する場合は、現金を0に維持するため上限を超えて取り崩します）。`
+      : `年間支出または資産の${withdrawalRatePct}%（設定値）のいずれか大きい額を資産全体から引き出すと仮定しています（既存の現金から優先的に充当し、不足分をリスク資産の売却で賄います）。余剰分は再投資されず現金に滞留します。`
     },
     { type: "text", value: "\n\n■ 年金受給の見込みについて\n本シミュレーションでは、ご本人が" },
     { type: "text", value: String(fireAchievementAge) },
@@ -145,8 +145,8 @@ export function generateAlgorithmExplanationSegments(params) {
   segments.push(
     { type: "text", value: "\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: " },
     { type: "text", value: withdrawalMode === "min"
-      ? "生活費の不足分、または「資産 × 取崩率」のいずれか小さい額を引き出します。ただし、現金が不足する場合は、現金を0に維持するために上限（取崩率）を超えて不足分をすべて取り崩します。"
-      : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります（税金考慮時は利益分のみグロスアップ）。"
+      ? "生活費の不足分（現金残高を考慮した純増分）、または「資産 × 取崩率」のいずれか小さい額をリスク資産から引き出します。ただし、現金が不足する場合は、現金を0に維持するために上限（取崩率）を超えて不足分をすべて取り崩します。"
+      : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。既存の現金から優先的に支出し、不足分のみをリスク資産から取り崩します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります（税金考慮時は利益分のみグロスアップ）。"
     },
     { type: "text", value: "\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト" },
     { type: "amount", value: formatYen(postFireExtraExpenseMonthly) },
@@ -474,7 +474,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       monthlyData.push({
         month: m,
         age: ageAtMonthM,
-        assets,
+        assets: Math.max(0, currentCash + currentRisk),
         riskAssets: Math.max(0, currentRisk),
         cashAssets: Math.max(0, currentCash),
         requiredAssets: reqAssets,
@@ -527,22 +527,23 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         monthlyWithdrawal = 0;
       }
     } else {
-      const targetWithdrawalFromAssets = (assets * withdrawalRate) / 12;
+      const targetWithdrawalFromPortfolio = (assets * withdrawalRate) / 12;
       const expenseShortfall = Math.max(0, monthlyExpensesVal - incomeAvailable);
-      let netToTakeFromAssets = withdrawalMode === "min"
-        ? Math.min(expenseShortfall, targetWithdrawalFromAssets)
-        : Math.max(expenseShortfall, targetWithdrawalFromAssets);
 
-      // Force withdrawal to cover shortfall if cash is insufficient, even if it exceeds withdrawalRate
-      if (currentCash < expenseShortfall) {
-        netToTakeFromAssets = Math.max(netToTakeFromAssets, expenseShortfall);
-      }
+      let netToTakeFromPortfolio = withdrawalMode === "min"
+        ? Math.min(expenseShortfall, targetWithdrawalFromPortfolio)
+        : Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
 
-      const takenFromCash = Math.min(currentCash, netToTakeFromAssets);
-      const remainingShortfall = netToTakeFromAssets - takenFromCash;
+      // Force taking enough from assets to keep cash non-negative
+      const absoluteMinFromPortfolio = Math.max(0, expenseShortfall - currentCash);
+      netToTakeFromPortfolio = Math.max(netToTakeFromPortfolio, absoluteMinFromPortfolio);
+
+      // We use available cash FIRST to satisfy this target
+      const takenFromCash = Math.min(currentCash, netToTakeFromPortfolio);
+      const neededFromRiskNet = Math.max(0, netToTakeFromPortfolio - takenFromCash);
 
       const withdrawal = withdrawFromRiskAssets({
-        neededNetAmount: remainingShortfall,
+        neededNetAmount: neededFromRiskNet,
         currentRisk,
         currentCostBasis,
         includeTax,
@@ -553,7 +554,9 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       currentCostBasis = withdrawal.nextCostBasis;
 
       currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
-      monthlyWithdrawal = takenFromCash + withdrawal.grossFromRisk;
+
+      // Withdrawal column now ONLY shows amount taken from RISK assets (gross)
+      monthlyWithdrawal = withdrawal.grossFromRisk;
       monthlyTaxes = withdrawal.taxes;
     }
 

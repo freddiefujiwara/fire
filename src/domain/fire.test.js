@@ -714,7 +714,12 @@ describe("fire domain", () => {
       // 100,000,000 - 100,000 = 99,900,000
       expect(month1.assets).toBe(initialAssets - monthlyExpense);
 
-      // But the "reported" withdrawal for that month should be 4% rule target
+      // The "reported" withdrawal now only shows the amount sold from RISK assets.
+      // Month 0: shortfall 100k, target 333k. Taken from Risk = 333k. Cash becomes 233k.
+      // Month 1-11: shortfall 100k, target 333k. Taken from Cash = 233k, Taken from Risk = 100k.
+      // Total Risk withdrawal for the year = 333k + 11 * 100k = 1,433,333.
+      // Month 0: shortfall 100k, target 333k. 333k from risk, 233k surplus in cash.
+      // Month 1-11: shortfall 100k, target 333k. 100k from risk (to reach 333k total with existing surplus).
       const sim = generateAnnualSimulation({
         initialAssets,
         riskAssets: initialAssets,
@@ -725,10 +730,8 @@ describe("fire domain", () => {
         includePension: false,
         retirementLumpSumAtFire: 0,
       });
-      // Monthly ~333,333 * 12. Since assets decrease slightly each month,
-      // the total will be slightly less than 4,000,000.
-      expect(sim[0].withdrawal).toBeGreaterThan(3900000);
-      expect(sim[0].withdrawal).toBeLessThan(4100000);
+      expect(sim[0].withdrawal).toBeGreaterThan(1400000);
+      expect(sim[0].withdrawal).toBeLessThan(1500000);
     });
 
     it("handles tax with pension enabled", () => {

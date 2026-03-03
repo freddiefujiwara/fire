@@ -139,9 +139,81 @@ describe("FIRE Engine - Withdrawal Modes", () => {
     expect(resMin.monthlyData[1].cashAssets).toBeGreaterThanOrEqual(0);
   });
 
+  it("should use available cash first in 'min' mode and only withdraw remaining shortfall", () => {
+    // Assets = 100M. 4% = 4M.
+    // Expenses = 500k/mo = 6M/yr.
+    // Cash = 10M.
+    // Shortfall (Expenses - Income) = 6M.
+    // ShortfallAfterCash = 6M - 10M = -4M (No shortfall after using cash).
+    // Withdrawal target = min(0, 4M) = 0.
+    // Force withdrawal to keep cash 0 = max(0, 0) = 0.
+    const resMin = performFireSimulation({
+        ...baseParams,
+        initialAssets: 100000000,
+        riskAssets: 90000000, // 10M cash
+        monthlyExpense: 500000,
+        withdrawalMode: "min"
+    }, { forceFireMonth: 0, recordMonthly: true });
+
+    const firstMonthWithdrawal = resMin.monthlyData[0].withdrawal;
+    expect(firstMonthWithdrawal).toBe(0); // Should use cash, not withdraw from risk
+
+    // Check second month cash. Start 10M, Expense 500k. Should be 9.5M.
+    expect(resMin.monthlyData[1].cashAssets).toBeCloseTo(9500000, 0);
+  });
+
+  it("should correctly handle the user-reported case: Age 56, high cash, 'min' mode", () => {
+    // User reported: Age 56, ~223M Assets, ~6.4M Cash, ~8.3M Expenses.
+    // 'min' mode should use the 6.4M cash and only withdraw the remaining ~1.9M from risk.
+    const params = {
+      initialAssets: 223392250,
+      riskAssets: 216998791,
+      annualReturnRate: 0,
+      monthlyExpense: 8289649 / 12,
+      monthlyIncome: 0,
+      currentAge: 56,
+      includeInflation: false,
+      includeTax: false,
+      withdrawalRate: 0.04,
+      withdrawalMode: "min",
+      simulationEndAge: 100,
+      retirementLumpSumAtFire: 0,
+      includePension: false,
+    };
+
+    const res = performFireSimulation(params, { forceFireMonth: 0, recordMonthly: true });
+
+    const year56 = res.monthlyData.slice(0, 12);
+    const totalWithdrawal = year56.reduce((sum, d) => sum + d.withdrawal, 0);
+    const totalExpenses = year56.reduce((sum, d) => sum + d.expenses, 0);
+
+    // Shortfall = Expenses (8.29M) - Start Cash (6.39M) = 1.90M
+    expect(totalWithdrawal).toBeCloseTo(totalExpenses - 6393459, 0);
+    expect(res.monthlyData[12].cashAssets).toBeCloseTo(0, 0);
+  });
+
   it("should calculate correct required assets", () => {
     const res = generateGrowthTable({ ...baseParams, withdrawalMode: "min" });
     // Required assets should be calculated for all months
     expect(res.table[0].requiredAssets).toBeGreaterThan(0);
+  });
+
+  it("should never have negative cash even when assets are fully depleted", () => {
+    // Assets = 1M, Expenses = 1M/mo. Should deplete instantly.
+    const params = {
+      ...baseParams,
+      initialAssets: 1000000,
+      riskAssets: 1000000,
+      monthlyExpense: 1000000,
+      withdrawalMode: "max"
+    };
+
+    const res = performFireSimulation(params, { forceFireMonth: 0, recordMonthly: true });
+
+    res.monthlyData.forEach(month => {
+      expect(month.cashAssets).toBeGreaterThanOrEqual(0);
+      expect(month.riskAssets).toBeGreaterThanOrEqual(0);
+      expect(month.assets).toBeGreaterThanOrEqual(0);
+    });
   });
 });
