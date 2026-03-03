@@ -1,5 +1,88 @@
 import { describe, it, expect } from "vitest";
-import { performFireSimulation, generateGrowthTable } from "./engine";
+import { performFireSimulation, generateGrowthTable, generateAnnualSimulation } from "./engine";
+
+describe("FIRE Engine - Accounting Identity and Consistency", () => {
+  const baseParams = {
+    initialAssets: 10000000,
+    riskAssets: 5000000,
+    annualReturnRate: 0.05,
+    monthlyExpense: 200000,
+    monthlyIncome: 400000,
+    currentAge: 40,
+    includeInflation: true,
+    inflationRate: 0.02,
+    includeTax: true,
+    taxRate: 0.2,
+    withdrawalRate: 0.04,
+    withdrawalMode: "max",
+    simulationEndAge: 100,
+    retirementLumpSumAtFire: 5000000,
+    includePension: true,
+    pensionConfig: {
+      userStartAge: 65,
+      spouseUserAgeStart: 65,
+      basicFullAnnualYen: 780000,
+      basicReduction: 1.0,
+      pensionDataAge: 40,
+      userKoseiAccruedAtDataAgeAnnualYen: 1000000,
+      userKoseiFutureFactorAnnualYenPerYear: 20000,
+      includeSpouse: false,
+    }
+  };
+
+  it("should maintain the accounting identity: Delta Assets = Income + Pension + LumpSum - Expenses + InvestmentGain - Taxes", () => {
+    // Force FIRE at age 45 (month 60)
+    const annualData = generateAnnualSimulation(baseParams, { forceFireMonth: 60 });
+
+    // Check every consecutive year pair
+    for (let i = 0; i < annualData.length - 1; i++) {
+      if (annualData[i + 1].assets <= 0) break; // Identity doesn't hold once bankrupt due to Math.max(0, assets)
+      const currentYear = annualData[i];
+      const nextYear = annualData[i + 1];
+
+      const deltaAssets = nextYear.assets - currentYear.assets;
+      const expectedDelta =
+        currentYear.income +
+        currentYear.pension +
+        currentYear.lumpSum -
+        currentYear.expenses +
+        currentYear.investmentGain -
+        currentYear.taxes;
+
+      // Allow for rounding errors since annual values are rounded
+      expect(Math.abs(deltaAssets - expectedDelta)).toBeLessThanOrEqual(12); // Max 1 yen per month rounding
+    }
+  });
+
+  it("should correctly record retirement lump sum in the FIRE year", () => {
+    const fireMonth = 60; // 5 years later
+    const annualData = generateAnnualSimulation(baseParams, { forceFireMonth: fireMonth });
+
+    const fireYearIndex = Math.floor(fireMonth / 12);
+    const fireYear = annualData[fireYearIndex];
+
+    expect(fireYear.lumpSum).toBe(baseParams.retirementLumpSumAtFire);
+
+    // Non-FIRE years should have zero lump sum
+    annualData.forEach((year, index) => {
+      if (index !== fireYearIndex) {
+        expect(year.lumpSum).toBe(0);
+      }
+    });
+  });
+
+  it("should not have partial data for the final year (Age 100)", () => {
+    const simulationEndAge = 100;
+    const currentAge = 40;
+    const annualData = generateAnnualSimulation({ ...baseParams, simulationEndAge, currentAge });
+
+    const lastYear = annualData[annualData.length - 1];
+    expect(lastYear.age).toBe(simulationEndAge - 1);
+
+    // If it were a partial year, income/expenses would be much lower than typical
+    expect(lastYear.expenses).toBeGreaterThan(1000000);
+  });
+});
 
 describe("FIRE Engine - Withdrawal Modes", () => {
   const baseParams = {

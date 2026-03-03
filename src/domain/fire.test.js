@@ -768,12 +768,12 @@ describe("fire domain", () => {
       currentAge: 40,
     };
 
-    it("generates annual data until age 100", () => {
+    it("generates annual data until age 99", () => {
       const result = generateAnnualSimulation(params);
-      // From age 40 to 100 (inclusive) -> 40, 41, ..., 100 is 61 points
-      expect(result.length).toBe(61);
+      // From age 40 to 99 (inclusive) -> 40, 41, ..., 99 is 60 points
+      expect(result.length).toBe(60);
       expect(result[0].age).toBe(40);
-      expect(result[result.length - 1].age).toBe(100);
+      expect(result[result.length - 1].age).toBe(99);
       expect(result[0].assets).toEqual(expect.any(Number));
       expect(result[0].assetsYearEnd).toEqual(expect.any(Number));
       expect(result[0]).toHaveProperty("fireMonthInYear");
@@ -785,9 +785,9 @@ describe("fire domain", () => {
         simulationEndAge: 80,
       });
 
-      // From age 40 to 80 (inclusive) -> 41 points
-      expect(result.length).toBe(41);
-      expect(result[result.length - 1].age).toBe(80);
+      // From age 40 to 79 (inclusive) -> 40 points
+      expect(result.length).toBe(40);
+      expect(result[result.length - 1].age).toBe(79);
     });
 
     it("marks FIRE month in annual row and keeps monthly/start-vs-end separation", () => {
@@ -831,7 +831,7 @@ describe("fire domain", () => {
       expect(result[0].income).toBe(3600000);
       expect(result[0].expenses).toBe(2400000);
     });
-    it("uses month 11 as year-end values for the first annual row", () => {
+    it("uses month 12 as year-end values for the first annual row", () => {
       const input = {
         ...params,
         initialAssets: 2000000,
@@ -848,8 +848,8 @@ describe("fire domain", () => {
       const annual = generateAnnualSimulation(input);
       const monthly = performFireSimulation(input, { recordMonthly: true }).monthlyData;
 
-      expect(annual[0].assetsYearEnd).toBe(Math.round(monthly[11].assets));
-      expect(annual[0].assetsYearEnd).not.toBe(Math.round(monthly[12].assets));
+      expect(annual[0].assetsYearEnd).toBe(Math.round(monthly[12].assets));
+      expect(annual[0].assetsYearEnd).not.toBe(Math.round(monthly[11].assets));
     });
 
 

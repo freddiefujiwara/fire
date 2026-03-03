@@ -433,8 +433,9 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     const ageAtMonthM = currentAge + m / 12;
     const remainingMonths = Math.max(0, totalMonthsUntilEndAge - m);
 
+    let monthlyLumpSum = 0;
     if (m === fireReachedMonth) {
-      currentCash += retirementLumpSumAtFire;
+      monthlyLumpSum = retirementLumpSumAtFire;
     }
 
     let firstYearSpikeWithInf = 0;
@@ -483,14 +484,19 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         expenses: monthlyExpensesVal,
         investmentGain: 0,
         withdrawal: 0,
+        lumpSum: monthlyLumpSum,
+        taxes: 0,
       });
     }
 
     if (m === totalMonthsUntilEndAge) break;
 
+    currentCash += monthlyLumpSum;
+
     let monthlyWithdrawal = 0;
     let monthlyInvest = 0;
     let investmentGain = 0;
+    let monthlyTaxes = 0;
     const returnRate = returnsArray[m];
 
     if (!isFire) {
@@ -512,6 +518,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
         currentCash = cashAfterFlow + withdrawal.actualNetFromRisk;
         monthlyWithdrawal = withdrawal.actualNetFromRisk > 0 ? withdrawal.grossFromRisk : 0;
+        monthlyTaxes = withdrawal.taxes;
       } else {
         monthlyInvest = Math.min(monthlyInvestment, cashAfterFlow);
         currentCash = cashAfterFlow - monthlyInvest;
@@ -542,8 +549,10 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
       currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
       monthlyWithdrawal = takenFromCash + withdrawal.grossFromRisk;
+      monthlyTaxes = withdrawal.taxes;
     }
 
+    const preGainRisk = currentRisk;
     investmentGain = currentRisk * returnRate;
     currentRisk += investmentGain;
 
@@ -552,6 +561,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       if (last) {
         last.investmentGain = investmentGain;
         last.withdrawal = monthlyWithdrawal;
+        last.taxes = monthlyTaxes;
+        last.riskAssets = preGainRisk;
       }
     }
   }
@@ -652,16 +663,19 @@ export function generateGrowthTable(params) {
  * @param {object} params - Raw simulation settings.
  * @returns {Array<object>} Yearly simulation summary rows.
  */
-export function generateAnnualSimulation(params) {
-  const { monthlyData, fireReachedMonth } = performFireSimulation(params, { recordMonthly: true });
+export function generateAnnualSimulation(inputParams, options = {}) {
+  const { monthlyData, fireReachedMonth } = performFireSimulation(inputParams, { ...options, recordMonthly: true });
   const yearlySummaries = [];
-  for (let y = 0; y < Math.ceil(monthlyData.length / MONTHS_PER_YEAR); y++) {
+  const numYears = Math.floor(monthlyData.length / MONTHS_PER_YEAR);
+
+  for (let y = 0; y < numYears; y++) {
     const startIdx = y * MONTHS_PER_YEAR;
-    const endIdx = Math.min(startIdx + MONTHS_PER_YEAR, monthlyData.length);
+    const endIdx = startIdx + MONTHS_PER_YEAR;
     const slice = monthlyData.slice(startIdx, endIdx);
 
     const firstMonth = monthlyData[startIdx];
-    const endMonth = monthlyData[endIdx - 1];
+    const nextYearFirstMonth = monthlyData[endIdx] || monthlyData[endIdx - 1];
+
     const fireMonthInYear = fireReachedMonth >= startIdx && fireReachedMonth < endIdx
       ? fireReachedMonth
       : null;
@@ -673,11 +687,13 @@ export function generateAnnualSimulation(params) {
       expenses: Math.round(sumByField(slice, "expenses")),
       withdrawal: Math.round(sumByField(slice, "withdrawal")),
       investmentGain: Math.round(sumByField(slice, "investmentGain")),
+      lumpSum: Math.round(sumByField(slice, "lumpSum")),
+      taxes: Math.round(sumByField(slice, "taxes")),
       assets: Math.round(firstMonth.assets),
-      assetsYearEnd: Math.round(endMonth.assets),
+      assetsYearEnd: Math.round(nextYearFirstMonth.assets),
       riskAssets: Math.round(firstMonth.riskAssets),
       cashAssets: Math.round(firstMonth.cashAssets),
-      savings: Math.round(endMonth.cashAssets - firstMonth.cashAssets),
+      savings: Math.round(nextYearFirstMonth.cashAssets - firstMonth.cashAssets),
       fireMonthInYear,
     });
   }
@@ -1135,12 +1151,13 @@ function withdrawFromRiskAssets({ neededNetAmount, currentRisk, currentCostBasis
   const maxNetFromRisk = Math.max(0, currentRisk * netMultiplier);
   const actualNetFromRisk = Math.min(neededNetAmount, maxNetFromRisk);
   const grossFromRisk = actualNetFromRisk / netMultiplier;
+  const taxes = grossFromRisk - actualNetFromRisk;
 
   const costBasisWithdrawn = grossFromRisk * (1 - gainRatio);
   const nextCostBasis = Math.max(0, currentCostBasis - costBasisWithdrawn);
   const nextRisk = Math.max(0, currentRisk - grossFromRisk);
 
-  return { actualNetFromRisk, grossFromRisk, nextCostBasis, nextRisk };
+  return { actualNetFromRisk, grossFromRisk, nextCostBasis, nextRisk, taxes };
 }
 
 /**
