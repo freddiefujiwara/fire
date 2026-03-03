@@ -20,6 +20,7 @@ const {
   retirementLumpSumAtFire,
   manualPostFireFirstYearExtraExpense,
   withdrawalRate,
+  withdrawalStrategy,
   includeBonus,
   simulationEndAge,
   useMonteCarlo,
@@ -224,6 +225,13 @@ const commitBasicReduction = () => {
           <div class="filter-item">
             <label>取り崩し率 (%)</label>
             <input v-model.lazy.number="withdrawalRate" type="number" step="0.1" class="is-public" />
+          </div>
+          <div class="filter-item">
+            <label>取り崩し方式</label>
+            <select v-model="withdrawalStrategy" class="date-select">
+              <option value="floor_by_rate">不足分 or 資産×率（大きい方）</option>
+              <option value="shortfall_with_rate_cap">不足分のみ（資産×率を上限）</option>
+            </select>
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
@@ -481,6 +489,10 @@ const commitBasicReduction = () => {
               <div class="summary-item">
                 <span class="meta">取り崩し率:</span>
                 <span>{{ withdrawalRate }}%</span>
+              </div>
+              <div class="summary-item">
+                <span class="meta">取り崩し方式:</span>
+                <span>{{ withdrawalStrategy === "shortfall_with_rate_cap" ? "不足分のみ（4%上限）" : "不足分 or 4%（大きい方）" }}</span>
               </div>
               <div class="summary-item">
                 <span class="meta">インフレ考慮:</span>

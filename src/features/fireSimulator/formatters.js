@@ -82,6 +82,7 @@ export function buildConditionsAndAlgorithmJson({
     taxRatePercent,
     expectedAnnualReturnRatePercent,
     withdrawalRatePercent,
+    withdrawalStrategy,
     postFireExtraExpenseMonthlyYen,
     postFireFirstYearExtraExpenseYen,
     isPostFireFirstYearExtraExpenseManual,
@@ -171,6 +172,7 @@ export function buildConditionsAndAlgorithmJson({
         includeTax,
         taxRatePercent,
         withdrawalRatePercent,
+    withdrawalStrategy,
         simulationEndAge,
       },
       postFirePlan: {

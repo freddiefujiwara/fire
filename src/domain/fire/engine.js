@@ -10,6 +10,10 @@ export {
 const MONTHS_PER_YEAR = 12;
 const SIMULATION_END_AGE = 100;
 const MIN_SIMULATION_END_AGE = 80;
+export const WITHDRAWAL_STRATEGY = {
+  FLOOR_BY_RATE: "floor_by_rate",
+  SHORTFALL_WITH_RATE_CAP: "shortfall_with_rate_cap",
+};
 
 /**
  * Build readable explanation segments for the simulation result.
@@ -21,6 +25,7 @@ export function generateAlgorithmExplanationSegments(params) {
     fireAchievementAge,
     pensionAnnualAtFire,
     withdrawalRatePct,
+    withdrawalStrategy = WITHDRAWAL_STRATEGY.FLOOR_BY_RATE,
     postFireExtraExpenseMonthly,
     postFireFirstYearExtraExpense,
     retirementLumpSumAtFire,
@@ -54,7 +59,13 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "amount", value: formatYen(retirementLumpSumAtFire) },
     { type: "text", value: " が現金資産に加算されます。\n・FIRE達成後は、年間支出または資産の" },
     { type: "text", value: String(withdrawalRatePct) },
-    { type: "text", value: "%（設定値）のいずれか大きい額を引き出すと仮定しています。余剰分は再投資されず現金に滞留します。\n\n■ 年金受給の見込みについて\n本シミュレーションでは、ご本人が" },
+    {
+      type: "text",
+      value: withdrawalStrategy === WITHDRAWAL_STRATEGY.SHORTFALL_WITH_RATE_CAP
+        ? "%（設定値）を上限として、生活費の不足分のみを引き出すと仮定しています。"
+        : "%（設定値）のいずれか大きい額を引き出すと仮定しています。余剰分は再投資されず現金に滞留します。",
+    },
+    { type: "text", value: "\n\n■ 年金受給の見込みについて\n本シミュレーションでは、ご本人が" },
     { type: "text", value: String(fireAchievementAge) },
     { type: "text", value: "歳でFIREし、設定された開始年齢から年金を受給するシナリオを想定しています。\n・世帯受給額（概算）: 年額 " },
     { type: "amount", value: formatYen(pensionAnnualAtFire) },
@@ -139,7 +150,12 @@ export function generateAlgorithmExplanationSegments(params) {
   }
 
   segments.push(
-    { type: "text", value: "\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: 生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります（税金考慮時は利益分のみグロスアップ）。\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト" },
+    {
+      type: "text",
+      value: `\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: ${withdrawalStrategy === WITHDRAWAL_STRATEGY.SHORTFALL_WITH_RATE_CAP
+    ? "「生活費の不足分」と「資産 × 取崩率」の小さい方（不足分のみ取り崩し、取崩率は上限として適用）を引き出します。"
+    : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります"}（税金考慮時は利益分のみグロスアップ）。\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト`,
+    },
     { type: "amount", value: formatYen(postFireExtraExpenseMonthly) },
     { type: "text", value: "）は、国民年金、国民健康保険、固定資産税等を合算した目安値です。\n・リタイア1年目の特別支出: 前年所得に基づく社会保険料・住民税のスパイク分として、FIRE後12か月間にわたり年額 " },
     { type: "amount", value: formatYen(postFireFirstYearExtraExpense) },
@@ -163,6 +179,7 @@ function calculateRequiredAssets({
   currentAgeInSimulation,
   includePension = true,
   withdrawalRate = 0.04,
+  withdrawalStrategy = WITHDRAWAL_STRATEGY.FLOOR_BY_RATE,
   pensionConfig,
   postFireFirstYearExtraExpense,
   m,
@@ -192,10 +209,30 @@ function calculateRequiredAssets({
     const A_case1 = (A / (1 + r)) + W_expense / (1 - t);
     const A_case2 = (A / (1 + r) - (P / (1 - t))) / (1 - (w / (1 - t)));
 
-    A = Math.max(A_case1, A_case2);
+    if (withdrawalStrategy === WITHDRAWAL_STRATEGY.SHORTFALL_WITH_RATE_CAP) {
+      const A_caseCap = w > 0 ? W_expense / w : (W_expense > 0 ? Number.POSITIVE_INFINITY : 0);
+      A = Math.max(A_case1, A_caseCap);
+    } else {
+      A = Math.max(A_case1, A_case2);
+    }
   }
 
   return Math.max(0, A);
+}
+
+function calculateNetWithdrawalNeed({
+  expenseShortfall,
+  targetWithdrawalFromAssets,
+  currentAssets,
+  withdrawalRate,
+  withdrawalStrategy
+}) {
+  if (withdrawalStrategy === WITHDRAWAL_STRATEGY.SHORTFALL_WITH_RATE_CAP) {
+    const cap = (currentAssets * withdrawalRate) / MONTHS_PER_YEAR;
+    return Math.min(expenseShortfall, Math.max(0, cap));
+  }
+
+  return Math.max(expenseShortfall, targetWithdrawalFromAssets);
 }
 
 /**
@@ -332,6 +369,9 @@ export function normalizeFireParams(params) {
     includeTax: Boolean(params.includeTax),
     taxRate: Number(params.taxRate ?? 0.20315),
     withdrawalRate: Number(params.withdrawalRate ?? 0.04),
+    withdrawalStrategy: Object.values(WITHDRAWAL_STRATEGY).includes(params.withdrawalStrategy)
+      ? params.withdrawalStrategy
+      : WITHDRAWAL_STRATEGY.FLOOR_BY_RATE,
     mortgageMonthlyPayment: Number(params.mortgageMonthlyPayment ?? 0),
     mortgagePayoffDate: params.mortgagePayoffDate || null,
     postFireExtraExpense: Number(params.postFireExtraExpense ?? 0),
@@ -371,6 +411,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     includeTax,
     taxRate,
     withdrawalRate,
+    withdrawalStrategy,
     mortgageMonthlyPayment,
     mortgagePayoffDate,
     postFireExtraExpense,
@@ -450,6 +491,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         currentAgeInSimulation: ageAtMonthM,
         includePension,
         withdrawalRate,
+        withdrawalStrategy,
         pensionConfig,
         postFireFirstYearExtraExpense,
         m,
@@ -509,7 +551,13 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     } else {
       const targetWithdrawalFromAssets = (assets * withdrawalRate) / 12;
       const expenseShortfall = Math.max(0, monthlyExpensesVal - incomeAvailable);
-      const netToTakeFromAssets = Math.max(expenseShortfall, targetWithdrawalFromAssets);
+      const netToTakeFromAssets = calculateNetWithdrawalNeed({
+        expenseShortfall,
+        targetWithdrawalFromAssets,
+        currentAssets: assets,
+        withdrawalRate,
+        withdrawalStrategy,
+      });
 
       const takenFromCash = Math.min(currentCash, netToTakeFromAssets);
       const remainingShortfall = netToTakeFromAssets - takenFromCash;

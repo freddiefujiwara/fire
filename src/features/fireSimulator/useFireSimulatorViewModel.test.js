@@ -165,6 +165,25 @@ describe("useFireSimulatorViewModel", () => {
     expect(decode(callArgs.params.p).mctsr).toBe(85);
   });
 
+  it("persists withdrawal strategy in the compressed URL state", async () => {
+    const replaceMock = vi.fn();
+    vi.spyOn(vueRouter, "useRouter").mockReturnValue({
+      replace: replaceMock,
+    });
+    vi.spyOn(vueRouter, "useRoute").mockReturnValue({
+      params: {},
+      query: {},
+    });
+
+    const vm = useFireSimulatorViewModel();
+    vm.withdrawalStrategy.value = "shortfall_with_rate_cap";
+    await nextTick();
+
+    const callArgs = replaceMock.mock.calls[0][0];
+    const { decode } = await import("@/domain/fire/url");
+    expect(decode(callArgs.params.p).wsm).toBe("shortfall_with_rate_cap");
+  });
+
   it("restores monteCarloTargetSuccessRate from the compressed URL state", async () => {
     const { encode } = await import("@/domain/fire/url");
     const encoded = encode({ mctsr: 92 });

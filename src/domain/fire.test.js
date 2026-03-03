@@ -147,6 +147,26 @@ describe("fire domain", () => {
       expect(text).toContain("適用調整率 = 0.856");
     });
 
+    it("describes shortfall-with-cap withdrawal mode in algorithm text", () => {
+      const segments = generateAlgorithmExplanationSegments({
+        fireAchievementAge: 45,
+        pensionAnnualAtFire: 1200000,
+        withdrawalRatePct: 4,
+        withdrawalStrategy: "shortfall_with_rate_cap",
+        postFireExtraExpenseMonthly: 60000,
+        postFireFirstYearExtraExpense: 0,
+        retirementLumpSumAtFire: 5000000,
+        useMonteCarlo: false,
+        monteCarloTrials: 1000,
+        monteCarloVolatilityPct: 15,
+        householdType: "single",
+      });
+
+      const text = segments.map((seg) => seg.value).join("");
+      expect(text).toContain("不足分のみ");
+      expect(text).toContain("小さい方");
+    });
+
     it("uses auto-calculated pension adjustment from start age", () => {
       const segments = generateAlgorithmExplanationSegments({
         fireAchievementAge: 45,
@@ -196,6 +216,7 @@ describe("fire domain", () => {
       expect(result.currentAge).toBe(40);
       expect(result.maxMonths).toBe(1200);
       expect(result.withdrawalRate).toBe(0.04);
+      expect(result.withdrawalStrategy).toBe("floor_by_rate");
       expect(result.inflationRate).toBe(0.02);
       expect(result.taxRate).toBe(0.20315);
     });
@@ -277,6 +298,27 @@ describe("fire domain", () => {
       // withdrawal = max(100k, 1.25M) = 1,250,000
       // month 1 assets: 500,000,000 - 1,250,000 + (1,250,000 - 100,000) = 499,900,000
       expect(result.table[1].assets).toBeCloseTo(499900000, 0);
+    });
+
+    it("caps post-FIRE withdrawal by withdrawalRate in shortfall-with-cap mode", () => {
+      const initialAssets = 120000000;
+      const result = performFireSimulation({
+        ...params,
+        initialAssets,
+        riskAssets: initialAssets,
+        monthlyExpense: 1000000,
+        monthlyIncome: 300000,
+        annualReturnRate: 0,
+        includeTax: false,
+        withdrawalRate: 0.04,
+        withdrawalStrategy: "shortfall_with_rate_cap",
+      }, { recordMonthly: true, forceFireMonth: 0 });
+
+      expect(result.fireReachedMonth).toBe(0);
+      // shortfall 700,000 に対して、上限は 120,000,000 * 0.04 / 12 = 400,000
+      expect(result.monthlyData[0].withdrawal).toBe(400000);
+      // 不足が継続するため、2ヶ月目終了時点の現金残高は -600,000 になる
+      expect(result.monthlyData[1].cashAssets).toBe(-600000);
     });
 
     it("depletes exactly at age 100 in deterministic table if returns=0", () => {
