@@ -559,7 +559,7 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         withdrawalStrategy,
       });
 
-      const takenFromCash = Math.min(currentCash, netToTakeFromAssets);
+      const takenFromCash = Math.min(Math.max(0, currentCash), netToTakeFromAssets);
       const remainingShortfall = netToTakeFromAssets - takenFromCash;
 
       const withdrawal = withdrawFromRiskAssets({

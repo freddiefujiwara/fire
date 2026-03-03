@@ -317,8 +317,10 @@ describe("fire domain", () => {
       expect(result.fireReachedMonth).toBe(0);
       // shortfall 700,000 に対して、上限は 120,000,000 * 0.04 / 12 = 400,000
       expect(result.monthlyData[0].withdrawal).toBe(400000);
-      // 不足が継続するため、2ヶ月目終了時点の現金残高は -600,000 になる
+      // 1ヶ月目終了時点では不足分(1,000,000-400,000)により現金は -600,000
       expect(result.monthlyData[1].cashAssets).toBe(-600000);
+      // 現金がマイナスでも、取り崩しは当月資産×4%/12（= 119,000,000×0.04/12）に抑制される
+      expect(result.monthlyData[1].withdrawal).toBeCloseTo(396666.6666666667);
     });
 
     it("depletes exactly at age 100 in deterministic table if returns=0", () => {
