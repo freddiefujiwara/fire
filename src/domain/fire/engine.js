@@ -55,7 +55,7 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "amount", value: formatYen(retirementLumpSumAtFire) },
     { type: "text", value: " が現金資産に加算されます。\n・FIRE達成後は、" },
     { type: "text", value: withdrawalMode === "min"
-      ? `支出を賄うのに不足する分だけ資産から取り崩します。ただし取り崩し額の上限は資産の${withdrawalRatePct}%（設定値）とします。`
+      ? `支出を賄うのに不足する分だけ資産から取り崩します。ただし取り崩し額の上限は資産の${withdrawalRatePct}%（設定値）とします（現金が不足する場合は、現金を0に維持するため上限を超えて取り崩します）。`
       : `年間支出または資産の${withdrawalRatePct}%（設定値）のいずれか大きい額を引き出すと仮定しています。余剰分は再投資されず現金に滞留します。`
     },
     { type: "text", value: "\n\n■ 年金受給の見込みについて\n本シミュレーションでは、ご本人が" },
@@ -145,7 +145,7 @@ export function generateAlgorithmExplanationSegments(params) {
   segments.push(
     { type: "text", value: "\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: " },
     { type: "text", value: withdrawalMode === "min"
-      ? "生活費の不足分、または「資産 × 取崩率」のいずれか小さい額を引き出します。不足分が取崩率（上限）を超える場合は、不足分をすべて賄えないことがあります。"
+      ? "生活費の不足分、または「資産 × 取崩率」のいずれか小さい額を引き出します。ただし、現金が不足する場合は、現金を0に維持するために上限（取崩率）を超えて不足分をすべて取り崩します。"
       : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります（税金考慮時は利益分のみグロスアップ）。"
     },
     { type: "text", value: "\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト" },
@@ -475,8 +475,8 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
         month: m,
         age: ageAtMonthM,
         assets,
-        riskAssets: currentRisk,
-        cashAssets: currentCash,
+        riskAssets: Math.max(0, currentRisk),
+        cashAssets: Math.max(0, currentCash),
         requiredAssets: reqAssets,
         isFire,
         income: monthlyIncomeVal,
@@ -529,9 +529,14 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
     } else {
       const targetWithdrawalFromAssets = (assets * withdrawalRate) / 12;
       const expenseShortfall = Math.max(0, monthlyExpensesVal - incomeAvailable);
-      const netToTakeFromAssets = withdrawalMode === "min"
+      let netToTakeFromAssets = withdrawalMode === "min"
         ? Math.min(expenseShortfall, targetWithdrawalFromAssets)
         : Math.max(expenseShortfall, targetWithdrawalFromAssets);
+
+      // Force withdrawal to cover shortfall if cash is insufficient, even if it exceeds withdrawalRate
+      if (currentCash < expenseShortfall) {
+        netToTakeFromAssets = Math.max(netToTakeFromAssets, expenseShortfall);
+      }
 
       const takenFromCash = Math.min(currentCash, netToTakeFromAssets);
       const remainingShortfall = netToTakeFromAssets - takenFromCash;

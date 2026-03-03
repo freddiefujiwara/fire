@@ -126,16 +126,17 @@ describe("FIRE Engine - Withdrawal Modes", () => {
     expect(resMin.monthlyData[1].cashAssets).toBeCloseTo(0, 0);
   });
 
-  it("should cap withdrawal in 'min' mode when expenses exceed target withdrawal", () => {
+  it("should exceed withdrawalRate cap in 'min' mode if cash would otherwise be negative", () => {
     // Expense = 500k/mo = 6M/yr, 4% of 100M = 4M.
-    // In 'min' mode, it should take min(6M, 4M) = 4M.
+    // In 'min' mode, it would normally take min(6M, 4M) = 4M.
+    // However, since cash starts at 0, it must take 6M to keep cash >= 0.
     const resMin = performFireSimulation({ ...baseParams, monthlyExpense: 500000, withdrawalMode: "min" }, { forceFireMonth: 0, recordMonthly: true });
 
     const firstMonthWithdrawal = resMin.monthlyData[0].withdrawal;
-    expect(firstMonthWithdrawal).toBeCloseTo(4000000 / 12, 0);
+    expect(firstMonthWithdrawal).toBeCloseTo(6000000 / 12, 0);
 
-    // Month 1's starting cash should be negative because withdrawal (333,333) < expenses (500,000)
-    expect(resMin.monthlyData[1].cashAssets).toBeLessThan(0);
+    // Cash should be kept at 0, not negative
+    expect(resMin.monthlyData[1].cashAssets).toBeGreaterThanOrEqual(0);
   });
 
   it("should calculate correct required assets", () => {
