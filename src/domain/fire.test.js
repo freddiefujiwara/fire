@@ -300,7 +300,7 @@ describe("fire domain", () => {
       expect(result.table[1].assets).toBeCloseTo(499900000, 0);
     });
 
-    it("caps post-FIRE withdrawal by withdrawalRate in shortfall-with-cap mode", () => {
+    it("uses emergency top-up to avoid negative cash in shortfall-with-cap mode", () => {
       const initialAssets = 120000000;
       const result = performFireSimulation({
         ...params,
@@ -315,12 +315,12 @@ describe("fire domain", () => {
       }, { recordMonthly: true, forceFireMonth: 0 });
 
       expect(result.fireReachedMonth).toBe(0);
-      // shortfall 700,000 に対して、上限は 120,000,000 * 0.04 / 12 = 400,000
-      expect(result.monthlyData[0].withdrawal).toBe(400000);
-      // 1ヶ月目終了時点では不足分(1,000,000-400,000)により現金は -600,000
-      expect(result.monthlyData[1].cashAssets).toBe(-600000);
-      // 現金がマイナスでも、取り崩しは当月資産×4%/12（= 119,000,000×0.04/12）に抑制される
-      expect(result.monthlyData[1].withdrawal).toBeCloseTo(396666.6666666667);
+      // 計画取り崩しは上限4%/12だが、不足分は緊急補填で追加取り崩しされる
+      expect(result.monthlyData[0].withdrawal).toBe(1000000);
+      // 緊急補填により、次月開始時の現金残高はマイナスにならない
+      expect(result.monthlyData[1].cashAssets).toBe(0);
+      // 2ヶ月目も同様に不足分全体が取り崩しで補填される
+      expect(result.monthlyData[1].withdrawal).toBe(1000000);
     });
 
     it("depletes exactly at age 100 in deterministic table if returns=0", () => {

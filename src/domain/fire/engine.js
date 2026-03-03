@@ -153,7 +153,7 @@ export function generateAlgorithmExplanationSegments(params) {
     {
       type: "text",
       value: `\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: ${withdrawalStrategy === WITHDRAWAL_STRATEGY.SHORTFALL_WITH_RATE_CAP
-    ? "「生活費の不足分」と「資産 × 取崩率」の小さい方（不足分のみ取り崩し、取崩率は上限として適用）を引き出します。"
+    ? "「生活費の不足分」と「資産 × 取崩率」の小さい方を計画取り崩し額とします（不足分取り崩し、取崩率は上限）。ただし計画取り崩しで現金が不足する場合は、借入を発生させないため不足分を追加で補填します。"
     : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります"}（税金考慮時は利益分のみグロスアップ）。\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト`,
     },
     { type: "amount", value: formatYen(postFireExtraExpenseMonthly) },
@@ -575,6 +575,21 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
 
       currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
       monthlyWithdrawal = takenFromCash + withdrawal.grossFromRisk;
+
+      if (currentCash < 0) {
+        const emergencyWithdrawal = withdrawFromRiskAssets({
+          neededNetAmount: Math.abs(currentCash),
+          currentRisk,
+          currentCostBasis,
+          includeTax,
+          taxRate,
+        });
+
+        currentRisk = emergencyWithdrawal.nextRisk;
+        currentCostBasis = emergencyWithdrawal.nextCostBasis;
+        currentCash += emergencyWithdrawal.actualNetFromRisk;
+        monthlyWithdrawal += emergencyWithdrawal.grossFromRisk;
+      }
     }
 
     investmentGain = currentRisk * returnRate;
