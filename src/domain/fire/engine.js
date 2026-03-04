@@ -56,7 +56,7 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "text", value: " が現金資産に加算されます。\n・FIRE達成後は、" },
     { type: "text", value: withdrawalMode === "min"
       ? `支出を賄うのに不足する分だけリスク資産から取り崩します（既存の現金も優先的に使用されます）。ただし取り崩し額の上限は資産の${withdrawalRatePct}%（設定値）とします（現金が不足する場合は、現金を0に維持するため上限を超えて取り崩します）。`
-      : `年間支出または資産の${withdrawalRatePct}%（設定値）のいずれか大きい額を資産全体から引き出すと仮定しています（既存の現金から優先的に充当し、不足分をリスク資産の売却で賄います）。余剰分は再投資されず現金に滞留します。`
+      : `年間支出または資産の${withdrawalRatePct}%（設定値）のいずれか大きい額を資産全体から取り崩すと仮定しています（既存の現金から優先的に充当し、不足分をリスク資産の売却で賄います）。支出不足分を超える取り崩しは追加支出として扱います。`
     },
     { type: "text", value: "\n\n■ 年金受給の見込みについて\n本シミュレーションでは、ご本人が" },
     { type: "text", value: String(fireAchievementAge) },
@@ -146,7 +146,7 @@ export function generateAlgorithmExplanationSegments(params) {
     { type: "text", value: "\n■ 各項目の算出定義\n・収入 (年金込): 定期収入（給与等） + 年金受給額の合算です。\n・支出: (基本生活費 - 住宅ローン) × インフレ調整 + 住宅ローン(固定) + FIRE後追加支出（FIRE達成月より加算） + FIRE1年目特別支出\n・運用益: 当年中の運用リターン合計。月次複利で計算されます。\n・取り崩し額: " },
     { type: "text", value: withdrawalMode === "min"
       ? "生活費の不足分を、まず現金で充当し、なお足りない純不足分のみをリスク資産から取り崩します（取り崩し額は手取りベースで表示し、税額は別項目で表示）。"
-      : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を引き出します。既存の現金から優先的に支出し、不足分のみをリスク資産から取り崩します。FIRE後は収入や現金が残っていても、取崩率ルールが下限として適用されるため取り崩しが発生することがあります（税金考慮時は利益分のみグロスアップ）。"
+      : "生活費の不足分、または「資産 × 取崩率」のいずれか大きい額を取り崩します。既存の現金から優先的に充当し、不足分のみをリスク資産から取り崩します。支出不足分を超える取り崩しは追加支出として扱われるため、取崩率ルールが下限として適用されると資産寿命が短くなる場合があります（税金考慮時は利益分のみグロスアップ）。"
     },
     { type: "text", value: "\n・貯金額 (現金): 前年末残高 + 当年収支(収入 - 支出) - 当年投資額 + リスク資産からの補填（純額）\n・リスク資産額: 前年末残高 + 投資額 + 運用益 - 取崩額(グロス)\n\nFIRE後の追加支出（デフォルト" },
     { type: "amount", value: formatYen(postFireExtraExpenseMonthly) },
@@ -537,13 +537,14 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       const expenseShortfall = Math.max(0, monthlyExpensesVal - incomeAvailable);
 
       let neededFromRiskNet = 0;
+      let netToTakeFromPortfolio = 0;
       if (withdrawalMode === "min") {
         // In min mode, consume cash first and only withdraw enough from risk assets
         // to prevent year/month-end cash from going negative.
         const cashAfterFlow = currentCash + incomeAvailable - monthlyExpensesVal;
         neededFromRiskNet = Math.max(0, -cashAfterFlow);
       } else {
-        let netToTakeFromPortfolio = Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
+        netToTakeFromPortfolio = Math.max(expenseShortfall, targetWithdrawalFromPortfolio);
 
         // Force taking enough from assets to keep cash non-negative
         const absoluteMinFromPortfolio = Math.max(0, expenseShortfall - currentCash);
@@ -565,7 +566,11 @@ function _runCoreSimulation(params, { recordMonthly = false, fireMonth = -1, ret
       currentRisk = withdrawal.nextRisk;
       currentCostBasis = withdrawal.nextCostBasis;
 
-      currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal);
+      const extraSpending = withdrawalMode === "max"
+        ? Math.max(0, netToTakeFromPortfolio - expenseShortfall)
+        : 0;
+
+      currentCash += (incomeAvailable + withdrawal.actualNetFromRisk - monthlyExpensesVal - extraSpending);
 
       // Withdrawal column shows net amount available for spending from risk assets.
       monthlyWithdrawal = withdrawal.actualNetFromRisk;

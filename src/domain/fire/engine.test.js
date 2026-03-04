@@ -110,9 +110,9 @@ describe("FIRE Engine - Withdrawal Modes", () => {
     const firstMonthWithdrawal = resMax.monthlyData[0].withdrawal;
     expect(firstMonthWithdrawal).toBeCloseTo(4000000 / 12, 0);
 
-    // Month 1's starting cash should reflect Month 0's (withdrawal - expense)
-    // cash = 0 + (0 income + 333,333 withdrawal - 300,000 expense) = 33,333
-    expect(resMax.monthlyData[1].cashAssets).toBeGreaterThan(0);
+    // In max mode, the excess over expense shortfall is treated as additional spending,
+    // so cash does not accumulate from the forced withdrawal.
+    expect(resMax.monthlyData[1].cashAssets).toBeCloseTo(0, 0);
   });
 
   it("should withdraw less in 'min' mode when expenses are less than target withdrawal (4%)", () => {

@@ -275,8 +275,8 @@ describe("fire domain", () => {
       // 3% withdrawal: 500,000,000 * 0.03 / 12 = 1,250,000
       // monthlyExpense: 100,000
       // withdrawal = max(100k, 1.25M) = 1,250,000
-      // month 1 assets: 500,000,000 - 1,250,000 + (1,250,000 - 100,000) = 499,900,000
-      expect(result.table[1].assets).toBeCloseTo(499800000, 0);
+      // month 1 assets decline reflects both expense and extra spending induced by the 3% rule in max mode
+      expect(result.table[1].assets).toBeCloseTo(497503125, 0);
     });
 
     it("depletes exactly at age 100 in deterministic table if returns=0", () => {
@@ -550,6 +550,7 @@ describe("fire domain", () => {
         monthlyExpense: 0,
         monthlyInvestment: 5000, // Exceeds 1000
         annualReturnRate: 0,
+        withdrawalMode: "min",
         maxMonths: 1
       });
       // Month 0: assets 1000.
@@ -709,17 +710,14 @@ describe("fire domain", () => {
       });
 
       const month1 = result.table[1];
-      // Total assets after 1 month should be:
-      // start - expenses (we withdrew more but the excess stayed in cash)
-      // 100,000,000 - 100,000 = 99,900,000
-      expect(month1.assets).toBe(initialAssets - (monthlyExpense * 2));
+      // In max mode, the 4% rule forces additional discretionary spending when it exceeds expense shortfall,
+      // so assets should decline faster than "expenses only".
+      expect(month1.assets).toBeLessThan(initialAssets);
+      expect(month1.assets).toBeLessThan(initialAssets - ((initialAssets * withdrawalRate) / 12));
 
-      // The "reported" withdrawal now only shows the amount sold from RISK assets.
-      // Month 0: shortfall 100k, target 333k. Taken from Risk = 333k. Cash becomes 233k.
-      // Month 1-11: shortfall 100k, target 333k. Taken from Cash = 233k, Taken from Risk = 100k.
-      // Total Risk withdrawal for the year = 333k + 11 * 100k = 1,433,333.
-      // Month 0: shortfall 100k, target 333k. 333k from risk, 233k surplus in cash.
-      // Month 1-11: shortfall 100k, target 333k. 100k from risk (to reach 333k total with existing surplus).
+      // The "reported" withdrawal shows the amount sold from RISK assets.
+      // In max mode, target withdrawals are enforced each month, so annual risk sales
+      // should be close to 4% of assets (with month-to-month drift as assets decline).
       const sim = generateAnnualSimulation({
         initialAssets,
         riskAssets: initialAssets,
@@ -730,8 +728,8 @@ describe("fire domain", () => {
         includePension: false,
         retirementLumpSumAtFire: 0,
       });
-      expect(sim[0].withdrawal).toBeGreaterThan(1400000);
-      expect(sim[0].withdrawal).toBeLessThan(1500000);
+      expect(sim[0].withdrawal).toBeGreaterThan(3500000);
+      expect(sim[0].withdrawal).toBeLessThan(4100000);
     });
 
     it("handles tax with pension enabled", () => {
@@ -923,6 +921,26 @@ describe("fire domain", () => {
       // Year 1 cash is depleted, so full annual expenses are funded by risk withdrawals.
       expect(result[1].withdrawal).toBe(12000000);
     });
+    it("in max mode, enforced withdrawal above expense shortfall reduces assets faster", () => {
+      const common = {
+        ...params,
+        initialAssets: 50000000,
+        riskAssets: 50000000,
+        monthlyIncome: 0,
+        monthlyExpense: 100000,
+        annualReturnRate: 0,
+        includeTax: false,
+        withdrawalRate: 0.12,
+        retirementLumpSumAtFire: 0,
+      };
+
+      const minMode = performFireSimulation({ ...common, withdrawalMode: "min" }, { forceFireMonth: 0, recordMonthly: true });
+      const maxMode = performFireSimulation({ ...common, withdrawalMode: "max" }, { forceFireMonth: 0, recordMonthly: true });
+
+      expect(maxMode.monthlyData[1].assets).toBeLessThan(minMode.monthlyData[1].assets);
+      expect(maxMode.monthlyData[0].withdrawal).toBeGreaterThan(minMode.monthlyData[0].withdrawal);
+    });
+
 
     it("tracks risk assets separately without forced rebalancing", () => {
       const result = generateAnnualSimulation({
