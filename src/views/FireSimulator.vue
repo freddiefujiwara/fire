@@ -232,6 +232,9 @@ const commitBasicReduction = () => {
               <option value="max">定率4%または支出の大きい方</option>
               <option value="min">支出分のみ（上限4%）</option>
             </select>
+            <small class="meta">
+              ※ 取り崩し方法はFIRE達成後の取り崩し計算にのみ影響します（FIRE達成前の積立フェーズには影響しません）。
+            </small>
           </div>
           <div class="filter-item expense-item">
             <div class="label-row">
